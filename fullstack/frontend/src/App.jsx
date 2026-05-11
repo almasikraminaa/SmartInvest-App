@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Sidebar from './components/SideBar';
-import Navbar from './components/NavBar';
+import Sidebar from './components/layout/Sidebar';
+import Navbar from './components/layout/Header';
 import HomePage from './pages/HomePage';
 import MethodPage from './pages/MethodPage';
 import AnalysisPage from './pages/AnalysisPage';
@@ -11,7 +11,7 @@ function App() {
     <BrowserRouter>
       <div className="min-h-screen bg-slate-50 font-sans text-gray-900 flex">
         <Sidebar />
-        <main className="ml-64 flex-1 p-8">
+        <main className="ml-64 flex-1 flex flex-col p-8">
           <Navbar />
           <div className="flex-1 mt-2">
             <Routes>

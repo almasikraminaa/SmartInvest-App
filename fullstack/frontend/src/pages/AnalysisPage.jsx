@@ -27,7 +27,6 @@ export default function AnalysisPage() {
             <select className="border border-gray-200 rounded-xl p-3 text-sm text-gray-700 outline-none focus:border-smart-navy focus:ring-1 focus:ring-smart-navy bg-white">
               <option>LQ45</option>
               <option>IDX30</option>
-              <option>JII</option>
             </select>
           </div>
 
@@ -55,7 +54,7 @@ export default function AnalysisPage() {
           </div>
 
           <button type="button" className="w-full bg-smart-navy text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
             Run Analysis
           </button>
         </form>
@@ -89,7 +88,7 @@ export default function AnalysisPage() {
             <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex justify-between items-center text-gray-400">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-300 shadow-sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-500">[ Menunggu Analisis AI... ]</h3>
