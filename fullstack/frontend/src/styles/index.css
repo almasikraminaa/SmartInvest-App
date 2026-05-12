@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+@theme {
+  --color-smart-navy: #0A1D56;
+  --color-smart-green: #00D27B;
+}
