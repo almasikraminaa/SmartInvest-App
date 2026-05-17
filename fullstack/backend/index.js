@@ -42,5 +42,58 @@ app.post('/api/predict-investment', async (req, res) => {
   }
 });
 
+// ============================================
+// HISTORY ENDPOINTS
+// ============================================
+
+// GET — ambil semua riwayat analysis
+app.get('/api/history', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('analysis_history')
+      .select('*')
+      .order('date', { ascending: false });
+
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST — simpan hasil analysis baru ke history
+app.post('/api/history', async (req, res) => {
+  try {
+    const { analysisId, date, target, method, capital, return: expectedReturn, risk } = req.body;
+
+    const { data, error } = await supabase
+      .from('analysis_history')
+      .insert([{ analysis_id: analysisId, date, target, method, capital, expected_return: expectedReturn, risk }])
+      .select();
+
+    if (error) throw error;
+    res.status(201).json(data[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE — hapus riwayat analysis berdasarkan array ID
+app.delete('/api/history', async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    const { error } = await supabase
+      .from('analysis_history')
+      .delete()
+      .in('id', ids);
+
+    if (error) throw error;
+    res.status(200).json({ message: `${ids.length} record(s) deleted` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server jalan di port ${PORT}`));

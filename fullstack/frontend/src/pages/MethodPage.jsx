@@ -1,8 +1,25 @@
 // src/pages/MethodPage.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
-export default function MethodPage() {
+export default function MethodPage({ setIsAnalysisModalOpen, setPreSelectedMethod }) {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeMethod, setActiveMethod] = useState('MVEP');
+
+  // Baca hash dari URL untuk set tab aktif
+  useEffect(() => {
+    const hash = location.hash.replace('#', '').toUpperCase();
+    if (['MVEP', 'SIM', 'CAF'].includes(hash)) {
+      setActiveMethod(hash);
+    }
+  }, [location.hash]);
+
+  const handleSimulate = (method) => {
+    setPreSelectedMethod(method);
+    navigate('/analysis');
+    setIsAnalysisModalOpen(true);
+  };
 
   const methodData = {
     MVEP: {
@@ -61,7 +78,8 @@ export default function MethodPage() {
   const currentMethod = methodData[activeMethod];
 
   return (
-    <div className="flex flex-col gap-6 pb-10 max-w-4xl mx-auto">
+    <div className="bg-white rounded-xl shadow-sm p-8 min-h-[85vh]">
+    <div className="flex flex-col gap-6 pb-10 w-full">
 
       {/* 1. Header */}
       <div>
@@ -71,13 +89,13 @@ export default function MethodPage() {
         </p>
       </div>
 
-      {/* 2. Tab Navigation */}
-      <div className="flex gap-8 border-b border-gray-200 mt-2">
+      {/* 2. Tab Navigation — melebar rata */}
+      <div className="flex w-full border-b border-gray-200 mt-2">
         {['MVEP', 'SIM', 'CAF'].map((methodKey) => (
           <button
             key={methodKey}
             onClick={() => setActiveMethod(methodKey)}
-            className={`pb-3 text-sm font-bold transition-all border-b-2 -mb-[2px] ${
+            className={`flex-1 pb-3 text-sm font-bold text-center transition-all border-b-2 -mb-[2px] ${
               activeMethod === methodKey
                 ? 'text-smart-navy border-smart-navy'
                 : 'text-gray-400 border-transparent hover:text-gray-600'
@@ -89,7 +107,7 @@ export default function MethodPage() {
       </div>
 
       {/* 3. Konten Metode (Dibungkus dalam Card Elevated/Menonjol) */}
-      <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-md flex flex-col gap-6 animate-fade-in mt-6 relative overflow-hidden">
+      <div className="w-full bg-white p-8 rounded-3xl border border-gray-100 shadow-md flex flex-col gap-6 animate-fade-in mt-6 relative overflow-hidden">
 
         {/* Aksen visual background transparan di pojok card agar tidak terlalu sepi */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-smart-navy opacity-[0.03] rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
@@ -120,7 +138,7 @@ export default function MethodPage() {
         </div>
 
         {/* Kelebihan & Kekurangan Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full relative z-10">
 
           {/* Box Kelebihan */}
           <div className="border border-green-100 bg-green-50/50 rounded-2xl p-6">
@@ -156,13 +174,14 @@ export default function MethodPage() {
 
         {/* Action Button */}
         <div className="mt-2 relative z-10 flex justify-end">
-          <button className="bg-smart-navy text-white px-7 py-3.5 rounded-xl font-bold text-sm hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2">
+          <button onClick={() => handleSimulate(activeMethod)} className="bg-smart-navy text-white px-7 py-3.5 rounded-xl font-bold text-sm hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2">
             Simulasikan dengan {activeMethod}
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
           </button>
         </div>
 
       </div>
+    </div>
     </div>
   );
 }
