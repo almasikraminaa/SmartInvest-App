@@ -3,6 +3,8 @@ import tensorflow as tf
 import joblib
 import pandas as pd
 import numpy as np
+import zipfile
+import json
 
 from pathlib import Path
 
@@ -40,49 +42,48 @@ DATA_PATH = (
 
 
 # ==============================================================================
-# ULTIMATE SERIALIZATION PATCH UNTUK ARSITEKTUR FUNCTIONAL (KERAS 3)
+# SAFE LOAD MODEL FOR .keras FORMAT (ZIP CONFIG CLEANER VIA OFFICIAL API)
 # ==============================================================================
 
-@keras.saving.register_keras_serializable(package="keras.layers", name="Dense")
-class PatchedDense(keras.layers.Dense):
-    @classmethod
-    def from_config(cls, config):
-        # Buang paksa parameter Keras 2 yang bikin crash di Keras 3
-        config.pop("quantization_config", None)
-        return super().from_config(config)
+def safe_load_ihsg_model(model_path):
+    """
+    Membuka file .keras (zip), membaca config.json, membersihkan parameter 
+    lama yang tidak kompatibel, mendeserialisasi struktur model, dan memuat bobotnya.
+    """
+    with zipfile.ZipFile(model_path, "r") as z:
+        config_bytes = z.read("config.json")
+        config_dict = json.loads(config_bytes.decode("utf-8"))
 
-@keras.saving.register_keras_serializable(package="keras.layers", name="MultiHeadAttention")
-class PatchedMultiHeadAttention(keras.layers.MultiHeadAttention):
-    @classmethod
-    def from_config(cls, config):
-        config.pop("use_gate", None)
-        config.pop("seed", None)
-        return super().from_config(config)
+    def clean_config(node):
+        if isinstance(node, dict):
+            # Hapus seluruh parameter pengganggu warisan Keras 2 secara rekursif
+            node.pop("quantization_config", None)
+            node.pop("use_gate", None)
+            node.pop("renorm", None)
+            node.pop("renorm_clipping", None)
+            node.pop("renorm_momentum", None)
+            for k, v in list(node.items()):
+                clean_config(v)
+        elif isinstance(node, list):
+            for item in node:
+                clean_config(item)
 
-@keras.saving.register_keras_serializable(package="keras.layers", name="BatchNormalization")
-class PatchedBatchNormalization(keras.layers.BatchNormalization):
-    @classmethod
-    def from_config(cls, config):
-        config.pop("renorm", None)
-        config.pop("renorm_clipping", None)
-        config.pop("renorm_momentum", None)
-        return super().from_config(config)
+    clean_config(config_dict)
+    
+    # Rekonstruksi arsitektur model dari konfigurasi yang sudah steril
+    model = keras.saving.deserialize_keras_object(config_dict)
+    
+    # Muat bobot (weights) secara native langsung dari file .keras asli
+    model.load_weights(model_path)
+    return model
 
 
 # ==========================
 # LOAD MODEL EXECUTION
 # ==========================
 
-# Daftarkan ke custom_objects sebagai jaminan ganda lapis kedua
-model = tf.keras.models.load_model(
-    str(MODEL_PATH),
-    compile=False,
-    custom_objects={
-        "Dense": PatchedDense,
-        "MultiHeadAttention": PatchedMultiHeadAttention,
-        "BatchNormalization": PatchedBatchNormalization
-    }
-)
+# Eksekusi pemuatan model IHSG menggunakan sanitizer aman kita
+model = safe_load_ihsg_model(str(MODEL_PATH))
 
 scaler = joblib.load(
     SCALER_PATH
