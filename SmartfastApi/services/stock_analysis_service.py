@@ -7,7 +7,6 @@ import tensorflow as tf
 from keras.initializers import Orthogonal
 from pathlib import Path
 
-
 # ==========================
 # CUSTOM LAYER
 # ==========================
@@ -164,85 +163,37 @@ print(
 )
 
 
-
 from keras.layers import (
     MultiHeadAttention,
     BatchNormalization,
     Dense
 )
 
+# ==============================================================================
+# UPDATED PATCH FOR KERAS 3 ENVIRONMENT
+# ==============================================================================
 
-class PatchedDense(
-    Dense
-):
-    def __init__(
-        self,
-        *args,
-        quantization_config=None,
-        **kwargs
-    ):
+class PatchedDense(Dense):
+    @classmethod
+    def from_config(cls, config):
+        config.pop("quantization_config", None)
+        return super().from_config(config)
 
-        kwargs.pop(
-            "quantization_config",
-            None
-        )
+class PatchedMultiHeadAttention(MultiHeadAttention):
+    @classmethod
+    def from_config(cls, config):
+        config.pop("use_gate", None)
+        config.pop("seed", None)  # Membuang parameter seed Keras 2 yang dilarang di Keras 3
+        return super().from_config(config)
 
-        super().__init__(
-            *args,
-            **kwargs
-        )
-class PatchedMultiHeadAttention(
-    MultiHeadAttention
-):
-    def __init__(
-        self,
-        *args,
-        use_gate=False,
-        **kwargs
-    ):
+class PatchedBatchNormalization(BatchNormalization):
+    @classmethod
+    def from_config(cls, config):
+        config.pop("renorm", None)
+        config.pop("renorm_clipping", None)
+        config.pop("renorm_momentum", None)
+        return super().from_config(config)
 
-        kwargs.pop(
-            "use_gate",
-            None
-        )
-
-        super().__init__(
-            *args,
-            **kwargs
-        )
-
-
-class PatchedBatchNormalization(
-    BatchNormalization
-):
-    def __init__(
-        self,
-        *args,
-        renorm=False,
-        renorm_clipping=None,
-        renorm_momentum=0.99,
-        **kwargs
-    ):
-
-        kwargs.pop(
-            "renorm",
-            None
-        )
-
-        kwargs.pop(
-            "renorm_clipping",
-            None
-        )
-
-        kwargs.pop(
-            "renorm_momentum",
-            None
-        )
-
-        super().__init__(
-            *args,
-            **kwargs
-        )
 # ==========================
 # LOAD MODEL
 # ==========================
@@ -254,23 +205,26 @@ model = tf.keras.models.load_model(
             CustomDenseMaju,
         "CustomLayers>CustomDenseMaju":
             CustomDenseMaju,
-        # MultiHeadAttention patch
-        "MultiHeadAttention":
-            PatchedMultiHeadAttention,
-        "keras.layers.MultiHeadAttention":
-            PatchedMultiHeadAttention,
-        "BatchNormalization":
-            PatchedBatchNormalization,
-        "keras.layers.BatchNormalization":
-            PatchedBatchNormalization,
+            
+        # Registrasi Patch untuk format string bervariasi
+        "MultiHeadAttention": PatchedMultiHeadAttention,
+        "keras.layers.MultiHeadAttention": PatchedMultiHeadAttention,
+        "keras.src.layers.multi_head_attention.MultiHeadAttention": PatchedMultiHeadAttention,
         
-        # Tambahkan dua baris ini untuk mengatasi error Orthogonal initializer
-        "Orthogonal": 
-            Orthogonal,
-        "keras.initializers.Orthogonal": 
-            Orthogonal
+        "BatchNormalization": PatchedBatchNormalization,
+        "keras.layers.BatchNormalization": PatchedBatchNormalization,
+        "keras.src.layers.normalization.batch_normalization.BatchNormalization": PatchedBatchNormalization,
+        
+        "Dense": PatchedDense,
+        "keras.layers.Dense": PatchedDense,
+        "keras.src.layers.core.dense.Dense": PatchedDense,
+        
+        "Orthogonal": Orthogonal,
+        "keras.initializers.Orthogonal": Orthogonal,
+        "keras.src.initializers.orthogonal.Orthogonal": Orthogonal
     }
 )
+
 scaler = joblib.load(
     SCALER_PATH
 )
