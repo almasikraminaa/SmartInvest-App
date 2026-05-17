@@ -3,6 +3,8 @@ import tensorflow as tf
 import joblib
 import pandas as pd
 import numpy as np
+import json
+import zipfile
 
 from pathlib import Path
 
@@ -149,16 +151,11 @@ DATA_PATH = (
 
 
 # ==============================================================================
-# NATIVE CORE PATCH FOR .keras FORMAT (KERAS 3 REGISTRY OVERRIDE)
+# REGISTER PATCHED LAYERS OFFICIALLY IN KERAS 3 ENVIRONMENT
 # ==============================================================================
 
-OriginalLSTM = keras.layers.LSTM
-OriginalBiDir = keras.layers.Bidirectional
-OriginalDense = keras.layers.Dense
-OriginalMHA = keras.layers.MultiHeadAttention
-OriginalBN = keras.layers.BatchNormalization
-
-class PatchedLSTM(OriginalLSTM):
+@keras.saving.register_keras_serializable(package="Patch")
+class PatchedLSTM(keras.layers.LSTM):
     @classmethod
     def from_config(cls, config):
         ri = config.get("recurrent_initializer")
@@ -169,7 +166,8 @@ class PatchedLSTM(OriginalLSTM):
                 config["recurrent_initializer"] = Orthogonal(gain=gain)
         return super().from_config(config)
 
-class PatchedBidirectional(OriginalBiDir):
+@keras.saving.register_keras_serializable(package="Patch")
+class PatchedBidirectional(keras.layers.Bidirectional):
     @classmethod
     def from_config(cls, config):
         inner = config.get("layer", {})
@@ -184,20 +182,23 @@ class PatchedBidirectional(OriginalBiDir):
                 }
         return super().from_config(config)
 
-class PatchedDense(OriginalDense):
+@keras.saving.register_keras_serializable(package="Patch")
+class PatchedDense(keras.layers.Dense):
     @classmethod
     def from_config(cls, config):
         config.pop("quantization_config", None)
         return super().from_config(config)
 
-class PatchedMultiHeadAttention(OriginalMHA):
+@keras.saving.register_keras_serializable(package="Patch")
+class PatchedMultiHeadAttention(keras.layers.MultiHeadAttention):
     @classmethod
     def from_config(cls, config):
         config.pop("use_gate", None)
         config.pop("seed", None)
         return super().from_config(config)
 
-class PatchedBatchNormalization(OriginalBN):
+@keras.saving.register_keras_serializable(package="Patch")
+class PatchedBatchNormalization(keras.layers.BatchNormalization):
     @classmethod
     def from_config(cls, config):
         config.pop("renorm", None)
@@ -205,50 +206,63 @@ class PatchedBatchNormalization(OriginalBN):
         config.pop("renorm_momentum", None)
         return super().from_config(config)
 
-# Paksa suntikkan wrapper langsung ke core Serialization engine Keras 3 Native
-if hasattr(keras, "src"):
-    from keras.src.saving import serialization_lib
-    serialization_lib.Config.register(PatchedDense)
-    serialization_lib.Config.register(PatchedMultiHeadAttention)
-    serialization_lib.Config.register(PatchedBatchNormalization)
-    serialization_lib.Config.register(PatchedLSTM)
-    serialization_lib.Config.register(PatchedBidirectional)
+
+# ==============================================================================
+# DYNAMIC JSON CONTEXT INJECTOR (SAFE LOAD METHOD FOR .keras ZIP)
+# ==============================================================================
+def safe_load_model(model_path):
+    """
+    Membuka arsip zip format .keras, memodifikasi config.json secara langsung di memori
+    untuk mengalihkan layer standar Keras 2 ke kelas Patch Keras 3 kita.
+    """
+    try:
+        # Bongkar berkas arsitektur config JSON bawaan zip model .keras
+        with zipfile.ZipFile(model_path, 'r') as z:
+            config_bytes = z.read('config.json')
+            config_json = json.loads(config_bytes.decode('utf-8'))
+
+        # Fungsi rekursif untuk mencari dan mengalihkan class_name layer standar
+        def patch_nodes(node):
+            if isinstance(node, dict):
+                if 'class_name' in node:
+                    cname = node['class_name']
+                    if cname == 'Dense' and node.get('config', {}).get('name') == 'output':
+                        node['class_name'] = 'Patch>PatchedDense'
+                    elif cname == 'MultiHeadAttention':
+                        node['class_name'] = 'Patch>PatchedMultiHeadAttention'
+                    elif cname == 'BatchNormalization':
+                        node['class_name'] = 'Patch>PatchedBatchNormalization'
+                    elif cname == 'LSTM':
+                        node['class_name'] = 'Patch>PatchedLSTM'
+                    elif cname == 'Bidirectional':
+                        node['class_name'] = 'Patch>PatchedBidirectional'
+                for k, v in node.items():
+                    patch_nodes(v)
+            elif isinstance(node, list):
+                for item in node:
+                    patch_nodes(item)
+
+        patch_nodes(config_json)
+
+        # Rekonstruksi arsitektur model menggunakan Keras 3 deserializer murni
+        return keras.saving.deserialize_keras_object(config_json)
+    except Exception as e:
+        print(f"[Fallback] Gagal menginjeksi konteks JSON, menggunakan standard loader: {e}")
+        return keras.models.load_model(model_path, compile=False)
 
 
 # ==========================
-# LOAD MODEL
+# LOAD MODEL EXECUTION
 # ==========================
 
-model = keras.models.load_model(
-    str(MODEL_PATH),
-    compile=False,
-    custom_objects={
-        "CustomDenseMaju": CustomDenseMaju,
-        "CustomLayers>CustomDenseMaju": CustomDenseMaju,
-        
-        # Fallback string mapping untuk pengaman ganda di dictionary custom_objects
-        "LSTM": PatchedLSTM,
-        "keras.layers.LSTM": PatchedLSTM,
-        
-        "Bidirectional": PatchedBidirectional,
-        "keras.layers.Bidirectional": PatchedBidirectional,
-        
-        "Dense": PatchedDense,
-        "keras.layers.Dense": PatchedDense,
-        "keras.src.layers.core.dense.Dense": PatchedDense,
-        
-        "MultiHeadAttention": PatchedMultiHeadAttention,
-        "keras.layers.MultiHeadAttention": PatchedMultiHeadAttention,
-        "keras.src.layers.attention.multi_head_attention.MultiHeadAttention": PatchedMultiHeadAttention,
-        
-        "BatchNormalization": PatchedBatchNormalization,
-        "keras.layers.BatchNormalization": PatchedBatchNormalization,
-        "keras.src.layers.normalization.batch_normalization.BatchNormalization": PatchedBatchNormalization,
-        
-        "Orthogonal": Orthogonal,
-        "keras.initializers.Orthogonal": Orthogonal
-    }
-)
+# Membaca model menggunakan injector dinamis aman milik kita
+model = safe_load_model(str(MODEL_PATH))
+
+# Memuat bobot internal dari biner berkas model asli (.keras) jika dibutuhkan
+try:
+    model.load_weights(str(MODEL_PATH))
+except Exception:
+    pass
 
 scaler = joblib.load(
     SCALER_PATH
