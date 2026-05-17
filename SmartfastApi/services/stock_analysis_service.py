@@ -163,8 +163,67 @@ print(
 )
 
 
+from keras.layers import (
+    MultiHeadAttention,
+    BatchNormalization,
+    Dense
+)
+
+# ==============================================================================
+# SAKTI LEGACY PATCH FOR KERAS 3 CORE H5 LOADER
+# ==============================================================================
+
+# 1. Ambil blueprint class asli dari Keras 3 Core
+OriginalMHA = keras.layers.MultiHeadAttention
+OriginalBN = keras.layers.BatchNormalization
+OriginalDense = keras.layers.Dense
+
+# 2. Buat kelas pembungkus dengan metode from_config untuk membuang parameter pengganggu
+class PatchedMultiHeadAttention(OriginalMHA):
+    @classmethod
+    def from_config(cls, config):
+        config.pop("use_gate", None)
+        config.pop("seed", None)
+        return super().from_config(config)
+
+class PatchedBatchNormalization(OriginalBN):
+    @classmethod
+    def from_config(cls, config):
+        config.pop("renorm", None)
+        config.pop("renorm_clipping", None)
+        config.pop("renorm_momentum", None)
+        return super().from_config(config)
+
+class PatchedDense(OriginalDense):
+    @classmethod
+    def from_config(cls, config):
+        config.pop("quantization_config", None)
+        return super().from_config(config)
+
+# 3. TIMPA (OVERWRITE) modul internal dan legacy registry Keras 3 secara paksa
+keras.layers.MultiHeadAttention = PatchedMultiHeadAttention
+keras.layers.BatchNormalization = PatchedBatchNormalization
+keras.layers.Dense = PatchedDense
+
+if hasattr(keras, "src"):
+    # Timpa jalur standard src
+    keras.src.layers.MultiHeadAttention = PatchedMultiHeadAttention
+    keras.src.layers.BatchNormalization = PatchedBatchNormalization
+    keras.src.layers.Dense = PatchedDense
+    keras.src.layers.core.dense.Dense = PatchedDense
+    keras.src.layers.attention.multi_head_attention.MultiHeadAttention = PatchedMultiHeadAttention
+    keras.src.layers.normalization.batch_normalization.BatchNormalization = PatchedBatchNormalization
+    
+    # TIMPA JALUR LEGACY SAVING (Biang kerok utama load .h5)
+    import keras.src.legacy.saving.serialization as legacy_serialization
+    if hasattr(legacy_serialization, "legacy_custom_objects"):
+        legacy_serialization.legacy_custom_objects["MultiHeadAttention"] = PatchedMultiHeadAttention
+        legacy_serialization.legacy_custom_objects["BatchNormalization"] = PatchedBatchNormalization
+        legacy_serialization.legacy_custom_objects["Dense"] = PatchedDense
+
+
 # ==========================
-# LOAD MODEL (Murni Format H5)
+# LOAD MODEL (Menggunakan Format H5 & Legacy Patch)
 # ==========================
 model = tf.keras.models.load_model(
     str(MODEL_PATH),
@@ -174,10 +233,15 @@ model = tf.keras.models.load_model(
             CustomDenseMaju,
         "CustomLayers>CustomDenseMaju":
             CustomDenseMaju,
-        "Orthogonal": 
-            Orthogonal,
-        "keras.initializers.Orthogonal": 
-            Orthogonal
+            
+        # Suntikkan ke dictionary standard sebagai cadangan ganda
+        "MultiHeadAttention": PatchedMultiHeadAttention,
+        "BatchNormalization": PatchedBatchNormalization,
+        "Dense": PatchedDense,
+        
+        "Orthogonal": Orthogonal,
+        "keras.initializers.Orthogonal": Orthogonal,
+        "keras.src.initializers.orthogonal.Orthogonal": Orthogonal
     }
 )
 
