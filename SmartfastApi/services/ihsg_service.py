@@ -39,13 +39,68 @@ DATA_PATH = (
 )
 
 
+# ==============================================================================
+# SAKTI CORE REGISTRY OVERRIDE UNTUK MODEL IHSG (PURE .keras FORMAT)
+# ==============================================================================
+
+OriginalDense = keras.layers.Dense
+OriginalMHA = keras.layers.MultiHeadAttention
+OriginalBN = keras.layers.BatchNormalization
+
+class PatchedDense(OriginalDense):
+    @classmethod
+    def from_config(cls, config):
+        config.pop("quantization_config", None)
+        return super().from_config(config)
+
+class PatchedMultiHeadAttention(OriginalMHA):
+    @classmethod
+    def from_config(cls, config):
+        config.pop("use_gate", None)
+        config.pop("seed", None)
+        return super().from_config(config)
+
+class PatchedBatchNormalization(OriginalBN):
+    @classmethod
+    def from_config(cls, config):
+        config.pop("renorm", None)
+        config.pop("renorm_clipping", None)
+        config.pop("renorm_momentum", None)
+        return super().from_config(config)
+
+# Paksa suntikkan ke memori core runtime registry Keras 3
+keras.layers.Dense = PatchedDense
+keras.layers.MultiHeadAttention = PatchedMultiHeadAttention
+keras.layers.BatchNormalization = PatchedBatchNormalization
+
+if hasattr(keras, "src"):
+    keras.src.layers.Dense = PatchedDense
+    keras.src.layers.core.dense.Dense = PatchedDense
+    keras.src.layers.MultiHeadAttention = PatchedMultiHeadAttention
+    keras.src.layers.attention.multi_head_attention.MultiHeadAttention = PatchedMultiHeadAttention
+    keras.src.layers.BatchNormalization = PatchedBatchNormalization
+    keras.src.layers.normalization.batch_normalization.BatchNormalization = PatchedBatchNormalization
+    
+    # Intercept jalur legacy serialization engine cadangan
+    import keras.src.legacy.saving.serialization as legacy_serialization
+    if hasattr(legacy_serialization, "legacy_custom_objects"):
+        legacy_serialization.legacy_custom_objects["Dense"] = PatchedDense
+        legacy_serialization.legacy_custom_objects["MultiHeadAttention"] = PatchedMultiHeadAttention
+        legacy_serialization.legacy_custom_objects["BatchNormalization"] = PatchedBatchNormalization
+
+
 # ==========================
-# LOAD MODEL (Murni Keras 2 Loader Tanpa Custom Objects)
+# LOAD MODEL EXECUTION
 # ==========================
 
 model = tf.keras.models.load_model(
     str(MODEL_PATH),
-    compile=False
+    compile=False,
+    custom_objects={
+        "Dense": PatchedDense,
+        "MultiHeadAttention": PatchedMultiHeadAttention,
+        "BatchNormalization": PatchedBatchNormalization
+    }
 )
 
 scaler = joblib.load(
