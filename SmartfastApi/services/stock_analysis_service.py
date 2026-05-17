@@ -170,15 +170,27 @@ from keras.layers import (
 )
 
 # ==============================================================================
-# UPDATED PATCH FOR KERAS 3 ENVIRONMENT
+# SAKTI HARD PATCH FOR KERAS 3 CORE MODULES
 # ==============================================================================
 
-class PatchedDense(Dense):
+# 1. Simpan class Dense asli bawaan Keras 3 ke variabel penampung
+OriginalDense = keras.layers.Dense
+
+# 2. Buat class wrapper untuk memotong dan membuang parameter lama
+class PatchedDense(OriginalDense):
     @classmethod
     def from_config(cls, config):
         config.pop("quantization_config", None)
         return super().from_config(config)
 
+# 3. Paksa timpa class internal Keras di memori runtime agar mengarah ke PatchedDense
+keras.layers.Dense = PatchedDense
+if hasattr(keras, "src"):
+    keras.src.layers.core.dense.Dense = PatchedDense
+    keras.src.layers.Dense = PatchedDense
+
+
+# 4. Buat patch untuk MultiHeadAttention dan BatchNormalization
 class PatchedMultiHeadAttention(MultiHeadAttention):
     @classmethod
     def from_config(cls, config):
@@ -194,6 +206,7 @@ class PatchedBatchNormalization(BatchNormalization):
         config.pop("renorm_momentum", None)
         return super().from_config(config)
 
+
 # ==========================
 # LOAD MODEL
 # ==========================
@@ -206,27 +219,25 @@ model = tf.keras.models.load_model(
         "CustomLayers>CustomDenseMaju":
             CustomDenseMaju,
             
-        # MultiHeadAttention patch
+        # Registrasi patch penunjang ke custom_objects sebagai pengaman ganda
         "MultiHeadAttention": PatchedMultiHeadAttention,
         "keras.layers.MultiHeadAttention": PatchedMultiHeadAttention,
         "keras.src.layers.multi_head_attention.MultiHeadAttention": PatchedMultiHeadAttention,
         
-        # BatchNormalization patch
         "BatchNormalization": PatchedBatchNormalization,
         "keras.layers.BatchNormalization": PatchedBatchNormalization,
         "keras.src.layers.normalization.batch_normalization.BatchNormalization": PatchedBatchNormalization,
         
-        # REBUT PANGGILAN "Dense" UTAMA AGAR SELESAI DARI ERROR QUANTIZATION
         "Dense": PatchedDense,
         "keras.layers.Dense": PatchedDense,
         "keras.src.layers.core.dense.Dense": PatchedDense,
         
-        # Initializer patch
         "Orthogonal": Orthogonal,
         "keras.initializers.Orthogonal": Orthogonal,
         "keras.src.initializers.orthogonal.Orthogonal": Orthogonal
     }
 )
+
 scaler = joblib.load(
     SCALER_PATH
 )
