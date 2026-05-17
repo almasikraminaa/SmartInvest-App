@@ -132,7 +132,7 @@ BASE_DIR = (
 MODEL_PATH = (
     BASE_DIR
     / "models"
-    / "smartinvest_best_model_3class.keras"
+    / "smartinvest_best_model_3class.h5"
 )
 
 SCALER_PATH = (
@@ -163,52 +163,8 @@ print(
 )
 
 
-from keras.layers import (
-    MultiHeadAttention,
-    BatchNormalization,
-    Dense
-)
-
-# ==============================================================================
-# SAKTI HARD PATCH FOR KERAS 3 CORE MODULES
-# ==============================================================================
-
-# 1. Simpan class Dense asli bawaan Keras 3 ke variabel penampung
-OriginalDense = keras.layers.Dense
-
-# 2. Buat class wrapper untuk memotong dan membuang parameter lama
-class PatchedDense(OriginalDense):
-    @classmethod
-    def from_config(cls, config):
-        config.pop("quantization_config", None)
-        return super().from_config(config)
-
-# 3. Paksa timpa class internal Keras di memori runtime agar mengarah ke PatchedDense
-keras.layers.Dense = PatchedDense
-if hasattr(keras, "src"):
-    keras.src.layers.core.dense.Dense = PatchedDense
-    keras.src.layers.Dense = PatchedDense
-
-
-# 4. Buat patch untuk MultiHeadAttention dan BatchNormalization
-class PatchedMultiHeadAttention(MultiHeadAttention):
-    @classmethod
-    def from_config(cls, config):
-        config.pop("use_gate", None)
-        config.pop("seed", None)  # Membuang parameter seed Keras 2 yang dilarang di Keras 3
-        return super().from_config(config)
-
-class PatchedBatchNormalization(BatchNormalization):
-    @classmethod
-    def from_config(cls, config):
-        config.pop("renorm", None)
-        config.pop("renorm_clipping", None)
-        config.pop("renorm_momentum", None)
-        return super().from_config(config)
-
-
 # ==========================
-# LOAD MODEL
+# LOAD MODEL (Murni Format H5)
 # ==========================
 model = tf.keras.models.load_model(
     str(MODEL_PATH),
@@ -218,23 +174,10 @@ model = tf.keras.models.load_model(
             CustomDenseMaju,
         "CustomLayers>CustomDenseMaju":
             CustomDenseMaju,
-            
-        # Registrasi patch penunjang ke custom_objects sebagai pengaman ganda
-        "MultiHeadAttention": PatchedMultiHeadAttention,
-        "keras.layers.MultiHeadAttention": PatchedMultiHeadAttention,
-        "keras.src.layers.multi_head_attention.MultiHeadAttention": PatchedMultiHeadAttention,
-        
-        "BatchNormalization": PatchedBatchNormalization,
-        "keras.layers.BatchNormalization": PatchedBatchNormalization,
-        "keras.src.layers.normalization.batch_normalization.BatchNormalization": PatchedBatchNormalization,
-        
-        "Dense": PatchedDense,
-        "keras.layers.Dense": PatchedDense,
-        "keras.src.layers.core.dense.Dense": PatchedDense,
-        
-        "Orthogonal": Orthogonal,
-        "keras.initializers.Orthogonal": Orthogonal,
-        "keras.src.initializers.orthogonal.Orthogonal": Orthogonal
+        "Orthogonal": 
+            Orthogonal,
+        "keras.initializers.Orthogonal": 
+            Orthogonal
     }
 )
 
