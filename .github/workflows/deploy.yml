@@ -14,25 +14,33 @@ jobs:
         fetch-depth: 0
         lfs: true
 
-    - name: Push Folder SmartfastApi to HF (Tanpa Hapus Model)
+    - name: Push Folder SmartfastApi & Assets to HF (Tanpa Hapus Model)
       env:
         HF_TOKEN: ${{ secrets.HF_TOKEN }}
       run: |
         # 1. Clone repository Hugging Face yang ada saat ini ke folder sementara
         git clone https://GALIHPP123:$HF_TOKEN@huggingface.co/spaces/GALIHPP123/SmartInvestAPI hf_space
         
-        # 2. Ambil isi folder SmartfastApi dari GitHub, copy ke folder clone tadi
-        # Menggunakan rsync untuk copy semua file KECUALI folder models
+        # 2. Pastikan folder models aman di dalam folder clone
         mkdir -p hf_space/models
-        rsync -av --exclude='models/' SmartfastApi/ hf_space/
         
-        # 3. Masuk ke folder Hugging Face, commit, dan push
+        # 3. Sinkronisasi codingan utama dari folder SmartfastApi ke hf_space
+        # Kita kecualikan folder 'models' dan 'assets' dari proses rsync utama ini
+        rsync -av --exclude='models/' --exclude='assets/' SmartfastApi/ hf_space/
+        
+        # 4. Amankan folder assets secara utuh sebagai FOLDER, bukan cuma isinya
+        if [ -d "SmartfastApi/assets" ]; then
+          mkdir -p hf_space/assets
+          rsync -av SmartfastApi/assets/ hf_space/assets/
+        fi
+        
+        # 5. Masuk ke folder Hugging Face, commit, dan push
         cd hf_space
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         
         git add .
-        # Cek apakah ada perubahan kode, jika ada baru commit
-        git diff-index --quiet HEAD || git commit -m "Deploy backend logic from GitHub Actions"
+        # Cek apakah ada perubahan kode atau aset, jika ada baru commit
+        git diff-index --quiet HEAD || git commit -m "Deploy backend logic and assets from GitHub Actions"
         
         git push origin main
