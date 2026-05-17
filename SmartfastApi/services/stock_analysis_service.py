@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from keras.initializers import Orthogonal
 from pathlib import Path
 
 # ==========================
@@ -27,15 +26,8 @@ class CustomDenseMaju(
     ):
 
         super().__init__(**kwargs)
-
         self.units = units
-
-        self.activation = (
-            keras.activations.get(
-                activation
-            )
-        )
-
+        self.activation = keras.activations.get(activation)
         self.l2_reg = l2_reg
 
     def build(
@@ -45,30 +37,19 @@ class CustomDenseMaju(
 
         self.w = self.add_weight(
             name="kernel",
-
             shape=(
                 input_shape[-1],
                 self.units
             ),
-
-            initializer=
-            "random_normal",
-
-            regularizer=
-            keras.regularizers.l2(
-                self.l2_reg
-            ),
-
+            initializer="random_normal",
+            regularizer=keras.regularizers.l2(self.l2_reg),
             trainable=True
         )
 
         self.b = self.add_weight(
             name="bias",
-
             shape=(self.units,),
-
             initializer="zeros",
-
             trainable=True
         )
 
@@ -77,45 +58,17 @@ class CustomDenseMaju(
         inputs
     ):
 
-        result = (
-            tf.matmul(
-                inputs,
-                self.w
-            )
-            + self.b
-        )
+        result = tf.matmul(inputs, self.w) + self.b
+        return self.activation(result) if self.activation else result
 
-        return (
-            self.activation(
-                result
-            )
-            if self.activation
-            else result
-        )
+    def get_config(self):
 
-    def get_config(
-        self
-    ):
-
-        config = (
-            super()
-            .get_config()
-        )
-
+        config = super().get_config()
         config.update({
-
-            "units":
-                self.units,
-
-            "activation":
-                keras.activations.serialize(
-                    self.activation
-                ),
-
-            "l2_reg":
-                self.l2_reg
+            "units": self.units,
+            "activation": keras.activations.serialize(self.activation),
+            "l2_reg": self.l2_reg
         })
-
         return config
 
 
@@ -152,96 +105,20 @@ DATA_PATH = (
 # DEBUG
 # ==========================
 
-print(
-    "MODEL EXISTS:",
-    MODEL_PATH.exists()
-)
-
-print(
-    "MODEL PATH:",
-    str(MODEL_PATH)
-)
-
-
-from keras.layers import (
-    MultiHeadAttention,
-    BatchNormalization,
-    Dense
-)
-
-# ==============================================================================
-# SAKTI LEGACY PATCH FOR KERAS 3 CORE H5 LOADER
-# ==============================================================================
-
-# 1. Ambil blueprint class asli dari Keras 3 Core
-OriginalMHA = keras.layers.MultiHeadAttention
-OriginalBN = keras.layers.BatchNormalization
-OriginalDense = keras.layers.Dense
-
-# 2. Buat kelas pembungkus dengan metode from_config untuk membuang parameter pengganggu
-class PatchedMultiHeadAttention(OriginalMHA):
-    @classmethod
-    def from_config(cls, config):
-        config.pop("use_gate", None)
-        config.pop("seed", None)
-        return super().from_config(config)
-
-class PatchedBatchNormalization(OriginalBN):
-    @classmethod
-    def from_config(cls, config):
-        config.pop("renorm", None)
-        config.pop("renorm_clipping", None)
-        config.pop("renorm_momentum", None)
-        return super().from_config(config)
-
-class PatchedDense(OriginalDense):
-    @classmethod
-    def from_config(cls, config):
-        config.pop("quantization_config", None)
-        return super().from_config(config)
-
-# 3. TIMPA (OVERWRITE) modul internal dan legacy registry Keras 3 secara paksa
-keras.layers.MultiHeadAttention = PatchedMultiHeadAttention
-keras.layers.BatchNormalization = PatchedBatchNormalization
-keras.layers.Dense = PatchedDense
-
-if hasattr(keras, "src"):
-    # Timpa jalur standard src
-    keras.src.layers.MultiHeadAttention = PatchedMultiHeadAttention
-    keras.src.layers.BatchNormalization = PatchedBatchNormalization
-    keras.src.layers.Dense = PatchedDense
-    keras.src.layers.core.dense.Dense = PatchedDense
-    keras.src.layers.attention.multi_head_attention.MultiHeadAttention = PatchedMultiHeadAttention
-    keras.src.layers.normalization.batch_normalization.BatchNormalization = PatchedBatchNormalization
-    
-    # TIMPA JALUR LEGACY SAVING (Biang kerok utama load .h5)
-    import keras.src.legacy.saving.serialization as legacy_serialization
-    if hasattr(legacy_serialization, "legacy_custom_objects"):
-        legacy_serialization.legacy_custom_objects["MultiHeadAttention"] = PatchedMultiHeadAttention
-        legacy_serialization.legacy_custom_objects["BatchNormalization"] = PatchedBatchNormalization
-        legacy_serialization.legacy_custom_objects["Dense"] = PatchedDense
+print("MODEL EXISTS:", MODEL_PATH.exists())
+print("MODEL PATH:", str(MODEL_PATH))
 
 
 # ==========================
-# LOAD MODEL (Menggunakan Format H5 & Legacy Patch)
+# LOAD MODEL (Murni Keras 2 Loader)
 # ==========================
+
 model = tf.keras.models.load_model(
     str(MODEL_PATH),
     compile=False,
     custom_objects={
-        "CustomDenseMaju":
-            CustomDenseMaju,
-        "CustomLayers>CustomDenseMaju":
-            CustomDenseMaju,
-            
-        # Suntikkan ke dictionary standard sebagai cadangan ganda
-        "MultiHeadAttention": PatchedMultiHeadAttention,
-        "BatchNormalization": PatchedBatchNormalization,
-        "Dense": PatchedDense,
-        
-        "Orthogonal": Orthogonal,
-        "keras.initializers.Orthogonal": Orthogonal,
-        "keras.src.initializers.orthogonal.Orthogonal": Orthogonal
+        "CustomDenseMaju": CustomDenseMaju,
+        "CustomLayers>CustomDenseMaju": CustomDenseMaju
     }
 )
 
@@ -268,7 +145,6 @@ stock_data["Date"] = pd.to_datetime(
 # ==========================
 
 FITUR_COLS = [
-
     "Return",
     "MA20",
     "MA50",
@@ -294,167 +170,48 @@ def build_features(df):
     df = df.copy()
 
     # RETURN
-
-    df["Return"] = (
-        df["Close"]
-        .pct_change()
-    )
+    df["Return"] = df["Close"].pct_change()
 
     # MOVING AVERAGE
-
-    df["MA20"] = (
-        df["Close"]
-        .rolling(20)
-        .mean()
-    )
-
-    df["MA50"] = (
-        df["Close"]
-        .rolling(50)
-        .mean()
-    )
+    df["MA20"] = df["Close"].rolling(20).mean()
+    df["MA50"] = df["Close"].rolling(50).mean()
 
     # VOLATILITY
-
-    df["Volatilitas"] = (
-        (
-            df["High"]
-            - df["Low"]
-        )
-        /
-        (
-            df["Close"]
-            + 1e-10
-        )
-    )
+    df["Volatilitas"] = (df["High"] - df["Low"]) / (df["Close"] + 1e-10)
 
     # VOLUME LOG
-
-    df["Volume_Log"] = np.log(
-        df["Volume"] + 1
-    )
+    df["Volume_Log"] = np.log(df["Volume"] + 1)
 
     # RSI
-
-    delta = (
-        df["Close"]
-        .diff()
-    )
-
-    gain = (
-        delta.clip(lower=0)
-        .rolling(14)
-        .mean()
-    )
-
-    loss = (
-        (-delta.clip(upper=0))
-        .rolling(14)
-        .mean()
-    )
-
-    rs = gain / (
-        loss + 1e-10
-    )
-
-    df["RSI"] = (
-        100 - (
-            100 / (1 + rs)
-        )
-    )
+    delta = df["Close"].diff()
+    gain = delta.clip(lower=0).rolling(14).mean()
+    loss = (-delta.clip(upper=0)).rolling(14).mean()
+    rs = gain / (loss + 1e-10)
+    df["RSI"] = 100 - (100 / (1 + rs))
 
     # MACD
-
-    ema12 = (
-        df["Close"]
-        .ewm(
-            span=12,
-            adjust=False
-        )
-        .mean()
-    )
-
-    ema26 = (
-        df["Close"]
-        .ewm(
-            span=26,
-            adjust=False
-        )
-        .mean()
-    )
-
-    df["MACD"] = (
-        ema12 - ema26
-    ) / (
-        df["Close"]
-        + 1e-10
-    )
+    ema12 = df["Close"].ewm(span=12, adjust=False).mean()
+    ema26 = df["Close"].ewm(span=26, adjust=False).mean()
+    df["MACD"] = (ema12 - ema26) / (df["Close"] + 1e-10)
 
     # MA GAP
-
-    df["MA_Gap"] = (
-        df["MA20"]
-        - df["MA50"]
-    ) / (
-        df["MA50"]
-        + 1e-10
-    )
+    df["MA_Gap"] = (df["MA20"] - df["MA50"]) / (df["MA50"] + 1e-10)
 
     # BOLLINGER BAND WIDTH
-
-    rolling_std = (
-        df["Close"]
-        .rolling(20)
-        .std()
-    )
-
-    upper_band = (
-        df["MA20"]
-        + (
-            2 * rolling_std
-        )
-    )
-
-    lower_band = (
-        df["MA20"]
-        - (
-            2 * rolling_std
-        )
-    )
-
-    df["BB_Width"] = (
-        upper_band
-        - lower_band
-    ) / (
-        df["MA20"]
-        + 1e-10
-    )
+    rolling_std = df["Close"].rolling(20).std()
+    upper_band = df["MA20"] + (2 * rolling_std)
+    lower_band = df["MA20"] - (2 * rolling_std)
+    df["BB_Width"] = (upper_band - lower_band) / (df["MA20"] + 1e-10)
 
     # ROC5
-
-    df["ROC5"] = (
-        df["Close"]
-        .pct_change(5)
-    )
+    df["ROC5"] = df["Close"].pct_change(5)
 
     # TREND STRENGTH
-
-    df["Trend_Strength"] = (
-        df["MA_Gap"]
-        .abs()
-    )
+    df["Trend_Strength"] = df["MA_Gap"].abs()
 
     # CLEANING
-
-    df.replace(
-        [np.inf, -np.inf],
-        np.nan,
-        inplace=True
-    )
-
-    df.dropna(
-        inplace=True
-    )
+    df.replace([np.inf, -np.inf], np.nan, inplace=True)
+    df.dropna(inplace=True)
 
     return df
 
@@ -463,125 +220,38 @@ def build_features(df):
 # PREDICT STOCK TREND
 # ==========================
 
-def predict_stock_trend(
-    ticker
-):
+def predict_stock_trend(ticker):
 
     try:
+        ticker_data = stock_data[stock_data["Ticker"] == ticker].sort_values(by="Date")
+        feature_df = build_features(ticker_data)
 
-        ticker_data = stock_data[
-            stock_data[
-                "Ticker"
-            ] == ticker
-        ].sort_values(
-            by="Date"
-        )
-
-        feature_df = build_features(
-            ticker_data
-        )
-
-        if len(
-            feature_df
-        ) < TIME_STEPS:
-
+        if len(feature_df) < TIME_STEPS:
             return {
-
-                "trend":
-                    "Unknown",
-
-                "confidence":
-                    0,
-
-                "recommendation":
-                    "NO_DATA"
+                "trend": "Unknown",
+                "confidence": 0,
+                "recommendation": "NO_DATA"
             }
 
-        last_features = (
+        last_features = feature_df[FITUR_COLS].tail(TIME_STEPS).values
+        scaled = scaler.transform(last_features)
+        final_input = scaled.reshape(1, TIME_STEPS, len(FITUR_COLS))
 
-            feature_df[
-                FITUR_COLS
-            ]
+        prediction = model.predict(final_input, verbose=0)[0]
+        idx = int(np.argmax(prediction))
 
-            .tail(
-                TIME_STEPS
-            )
-
-            .values
-        )
-
-        scaled = (
-            scaler.transform(
-                last_features
-            )
-        )
-
-        final_input = (
-
-            scaled.reshape(
-
-                1,
-                TIME_STEPS,
-                len(FITUR_COLS)
-            )
-        )
-
-        prediction = (
-            model.predict(
-                final_input,
-                verbose=0
-            )[0]
-        )
-
-        idx = int(
-            np.argmax(
-                prediction
-            )
-        )
-
-        labels = [
-
-            "Bearish",
-            "Sideways",
-            "Bullish"
-        ]
-
-        recommendations = [
-
-            "AVOID",
-            "HOLD",
-            "BUY"
-        ]
+        labels = ["Bearish", "Sideways", "Bullish"]
+        recommendations = ["AVOID", "HOLD", "BUY"]
 
         return {
-
-            "trend":
-                labels[idx],
-
-            "confidence":
-                round(
-                    float(
-                        np.max(
-                            prediction
-                        )
-                    ),
-                    4
-                ),
-
-            "recommendation":
-                recommendations[idx]
+            "trend": labels[idx],
+            "confidence": round(float(np.max(prediction)), 4),
+            "recommendation": recommendations[idx]
         }
 
     except Exception as e:
-
         return {
-
-            "trend":
-                "Error",
-
-            "confidence":
-                0,
-
-            "recommendation":
-                str(e)
+            "trend": "Error",
+            "confidence": 0,
+            "recommendation": str(e)
         }
