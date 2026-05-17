@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
+from keras.initializers import Orthogonal
 from pathlib import Path
 
 
@@ -246,34 +247,30 @@ class PatchedBatchNormalization(
 # LOAD MODEL
 # ==========================
 model = tf.keras.models.load_model(
-
     str(MODEL_PATH),
-
     compile=False,
-
     custom_objects={
-
         "CustomDenseMaju":
             CustomDenseMaju,
-
         "CustomLayers>CustomDenseMaju":
             CustomDenseMaju,
-
         # MultiHeadAttention patch
         "MultiHeadAttention":
             PatchedMultiHeadAttention,
-
         "keras.layers.MultiHeadAttention":
             PatchedMultiHeadAttention,
-
         "BatchNormalization":
             PatchedBatchNormalization,
-
         "keras.layers.BatchNormalization":
-            PatchedBatchNormalization
+            PatchedBatchNormalization,
+        
+        # Tambahkan dua baris ini untuk mengatasi error Orthogonal initializer
+        "Orthogonal": 
+            Orthogonal,
+        "keras.initializers.Orthogonal": 
+            Orthogonal
     }
 )
-
 scaler = joblib.load(
     SCALER_PATH
 )
