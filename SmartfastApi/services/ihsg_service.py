@@ -3,8 +3,6 @@ import tensorflow as tf
 import joblib
 import pandas as pd
 import numpy as np
-import json
-import zipfile
 
 from pathlib import Path
 
@@ -151,11 +149,16 @@ DATA_PATH = (
 
 
 # ==============================================================================
-# REGISTER PATCHED LAYERS OFFICIALLY IN KERAS 3 ENVIRONMENT
+# SAKTI LEGACY PATCH UNTUK PURE BINER .keras (BYPASS VIA LEGACY LOADER)
 # ==============================================================================
 
-@keras.saving.register_keras_serializable(package="Patch")
-class PatchedLSTM(keras.layers.LSTM):
+OriginalMHA = keras.layers.MultiHeadAttention
+OriginalBN = keras.layers.BatchNormalization
+OriginalDense = keras.layers.Dense
+OriginalLSTM = keras.layers.LSTM
+OriginalBiDir = keras.layers.Bidirectional
+
+class PatchedLSTM(OriginalLSTM):
     @classmethod
     def from_config(cls, config):
         ri = config.get("recurrent_initializer")
@@ -166,8 +169,7 @@ class PatchedLSTM(keras.layers.LSTM):
                 config["recurrent_initializer"] = Orthogonal(gain=gain)
         return super().from_config(config)
 
-@keras.saving.register_keras_serializable(package="Patch")
-class PatchedBidirectional(keras.layers.Bidirectional):
+class PatchedBidirectional(OriginalBiDir):
     @classmethod
     def from_config(cls, config):
         inner = config.get("layer", {})
@@ -182,23 +184,20 @@ class PatchedBidirectional(keras.layers.Bidirectional):
                 }
         return super().from_config(config)
 
-@keras.saving.register_keras_serializable(package="Patch")
-class PatchedDense(keras.layers.Dense):
+class PatchedDense(OriginalDense):
     @classmethod
     def from_config(cls, config):
         config.pop("quantization_config", None)
         return super().from_config(config)
 
-@keras.saving.register_keras_serializable(package="Patch")
-class PatchedMultiHeadAttention(keras.layers.MultiHeadAttention):
+class PatchedMultiHeadAttention(OriginalMHA):
     @classmethod
     def from_config(cls, config):
         config.pop("use_gate", None)
         config.pop("seed", None)
         return super().from_config(config)
 
-@keras.saving.register_keras_serializable(package="Patch")
-class PatchedBatchNormalization(keras.layers.BatchNormalization):
+class PatchedBatchNormalization(OriginalBN):
     @classmethod
     def from_config(cls, config):
         config.pop("renorm", None)
@@ -206,63 +205,52 @@ class PatchedBatchNormalization(keras.layers.BatchNormalization):
         config.pop("renorm_momentum", None)
         return super().from_config(config)
 
+# Paksa timpa standard layer Keras di memori runtime
+keras.layers.LSTM = PatchedLSTM
+keras.layers.Bidirectional = PatchedBidirectional
+keras.layers.Dense = PatchedDense
+keras.layers.MultiHeadAttention = PatchedMultiHeadAttention
+keras.layers.BatchNormalization = PatchedBatchNormalization
 
-# ==============================================================================
-# DYNAMIC JSON CONTEXT INJECTOR (SAFE LOAD METHOD FOR .keras ZIP)
-# ==============================================================================
-def safe_load_model(model_path):
-    """
-    Membuka arsip zip format .keras, memodifikasi config.json secara langsung di memori
-    untuk mengalihkan layer standar Keras 2 ke kelas Patch Keras 3 kita.
-    """
-    try:
-        # Bongkar berkas arsitektur config JSON bawaan zip model .keras
-        with zipfile.ZipFile(model_path, 'r') as z:
-            config_bytes = z.read('config.json')
-            config_json = json.loads(config_bytes.decode('utf-8'))
-
-        # Fungsi rekursif untuk mencari dan mengalihkan class_name layer standar
-        def patch_nodes(node):
-            if isinstance(node, dict):
-                if 'class_name' in node:
-                    cname = node['class_name']
-                    if cname == 'Dense' and node.get('config', {}).get('name') == 'output':
-                        node['class_name'] = 'Patch>PatchedDense'
-                    elif cname == 'MultiHeadAttention':
-                        node['class_name'] = 'Patch>PatchedMultiHeadAttention'
-                    elif cname == 'BatchNormalization':
-                        node['class_name'] = 'Patch>PatchedBatchNormalization'
-                    elif cname == 'LSTM':
-                        node['class_name'] = 'Patch>PatchedLSTM'
-                    elif cname == 'Bidirectional':
-                        node['class_name'] = 'Patch>PatchedBidirectional'
-                for k, v in node.items():
-                    patch_nodes(v)
-            elif isinstance(node, list):
-                for item in node:
-                    patch_nodes(item)
-
-        patch_nodes(config_json)
-
-        # Rekonstruksi arsitektur model menggunakan Keras 3 deserializer murni
-        return keras.saving.deserialize_keras_object(config_json)
-    except Exception as e:
-        print(f"[Fallback] Gagal menginjeksi konteks JSON, menggunakan standard loader: {e}")
-        return keras.models.load_model(model_path, compile=False)
+if hasattr(keras, "src"):
+    keras.src.layers.LSTM = PatchedLSTM
+    keras.src.layers.Bidirectional = PatchedBidirectional
+    keras.src.layers.Dense = PatchedDense
+    keras.src.layers.core.dense.Dense = PatchedDense
+    keras.src.layers.MultiHeadAttention = PatchedMultiHeadAttention
+    keras.src.layers.attention.multi_head_attention.MultiHeadAttention = PatchedMultiHeadAttention
+    keras.src.layers.BatchNormalization = PatchedBatchNormalization
+    keras.src.layers.normalization.batch_normalization.BatchNormalization = PatchedBatchNormalization
+    
+    # INTERCEPT REGISTRY UTAMA UNTUK PARSER LEGACY SAVING BINARY FILE
+    import keras.src.legacy.saving.serialization as legacy_serialization
+    if hasattr(legacy_serialization, "legacy_custom_objects"):
+        legacy_serialization.legacy_custom_objects["LSTM"] = PatchedLSTM
+        legacy_serialization.legacy_custom_objects["Bidirectional"] = PatchedBidirectional
+        legacy_serialization.legacy_custom_objects["Dense"] = PatchedDense
+        legacy_serialization.legacy_custom_objects["MultiHeadAttention"] = PatchedMultiHeadAttention
+        legacy_serialization.legacy_custom_objects["BatchNormalization"] = PatchedBatchNormalization
 
 
 # ==========================
 # LOAD MODEL EXECUTION
 # ==========================
 
-# Membaca model menggunakan injector dinamis aman milik kita
-model = safe_load_model(str(MODEL_PATH))
-
-# Memuat bobot internal dari biner berkas model asli (.keras) jika dibutuhkan
-try:
-    model.load_weights(str(MODEL_PATH))
-except Exception:
-    pass
+model = keras.models.load_model(
+    str(MODEL_PATH),
+    compile=False,
+    custom_objects={
+        "CustomDenseMaju": CustomDenseMaju,
+        "CustomLayers>CustomDenseMaju": CustomDenseMaju,
+        "LSTM": PatchedLSTM,
+        "Bidirectional": PatchedBidirectional,
+        "Dense": PatchedDense,
+        "MultiHeadAttention": PatchedMultiHeadAttention,
+        "BatchNormalization": PatchedBatchNormalization,
+        "Orthogonal": Orthogonal,
+        "keras.initializers.Orthogonal": Orthogonal
+    }
+)
 
 scaler = joblib.load(
     SCALER_PATH
