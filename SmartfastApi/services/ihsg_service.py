@@ -148,14 +148,19 @@ DATA_PATH = (
 )
 
 
-# ==========================
-# PATCHED LAYERS
-# ==========================
+# ==============================================================================
+# NATIVE CORE PATCH FOR .keras FORMAT (KERAS 3 REGISTRY OVERRIDE)
+# ==============================================================================
 
-class PatchedLSTM(LSTM):
+OriginalLSTM = keras.layers.LSTM
+OriginalBiDir = keras.layers.Bidirectional
+OriginalDense = keras.layers.Dense
+OriginalMHA = keras.layers.MultiHeadAttention
+OriginalBN = keras.layers.BatchNormalization
+
+class PatchedLSTM(OriginalLSTM):
     @classmethod
     def from_config(cls, config):
-        # Fix recurrent_initializer jika berupa dict format Keras 2.x
         ri = config.get("recurrent_initializer")
         if isinstance(ri, dict):
             class_name = ri.get("class_name", "")
@@ -164,11 +169,9 @@ class PatchedLSTM(LSTM):
                 config["recurrent_initializer"] = Orthogonal(gain=gain)
         return super().from_config(config)
 
-
-class PatchedBidirectional(Bidirectional):
+class PatchedBidirectional(OriginalBiDir):
     @classmethod
     def from_config(cls, config):
-        # Pastikan inner layer (LSTM) juga di-patch
         inner = config.get("layer", {})
         if isinstance(inner, dict):
             inner_config = inner.get("config", {})
@@ -181,78 +184,35 @@ class PatchedBidirectional(Bidirectional):
                 }
         return super().from_config(config)
 
+class PatchedDense(OriginalDense):
+    @classmethod
+    def from_config(cls, config):
+        config.pop("quantization_config", None)
+        return super().from_config(config)
 
-class PatchedDense(Dense):
-    def __init__(
-        self,
-        *args,
-        quantization_config=None,
-        **kwargs
-    ):
+class PatchedMultiHeadAttention(OriginalMHA):
+    @classmethod
+    def from_config(cls, config):
+        config.pop("use_gate", None)
+        config.pop("seed", None)
+        return super().from_config(config)
 
-        kwargs.pop(
-            "quantization_config",
-            None
-        )
+class PatchedBatchNormalization(OriginalBN):
+    @classmethod
+    def from_config(cls, config):
+        config.pop("renorm", None)
+        config.pop("renorm_clipping", None)
+        config.pop("renorm_momentum", None)
+        return super().from_config(config)
 
-        super().__init__(
-            *args,
-            **kwargs
-        )
-
-
-class PatchedMultiHeadAttention(
-    MultiHeadAttention
-):
-    def __init__(
-        self,
-        *args,
-        use_gate=False,
-        **kwargs
-    ):
-
-        kwargs.pop(
-            "use_gate",
-            None
-        )
-
-        super().__init__(
-            *args,
-            **kwargs
-        )
-
-
-class PatchedBatchNormalization(
-    BatchNormalization
-):
-    def __init__(
-        self,
-        *args,
-        renorm=False,
-        renorm_clipping=None,
-        renorm_momentum=0.99,
-        **kwargs
-    ):
-
-        kwargs.pop(
-            "renorm",
-            None
-        )
-
-        kwargs.pop(
-            "renorm_clipping",
-            None
-        )
-
-        kwargs.pop(
-            "renorm_momentum",
-            None
-        )
-
-        super().__init__(
-            *args,
-            **kwargs
-        )
+# Paksa suntikkan wrapper langsung ke core Serialization engine Keras 3 Native
+if hasattr(keras, "src"):
+    from keras.src.saving import serialization_lib
+    serialization_lib.Config.register(PatchedDense)
+    serialization_lib.Config.register(PatchedMultiHeadAttention)
+    serialization_lib.Config.register(PatchedBatchNormalization)
+    serialization_lib.Config.register(PatchedLSTM)
+    serialization_lib.Config.register(PatchedBidirectional)
 
 
 # ==========================
@@ -260,59 +220,34 @@ class PatchedBatchNormalization(
 # ==========================
 
 model = keras.models.load_model(
-
-    MODEL_PATH,
-
+    str(MODEL_PATH),
     compile=False,
-
     custom_objects={
-
-        # LSTM (patch Orthogonal initializer)
-        "LSTM":
-            PatchedLSTM,
-
-        "keras.layers.LSTM":
-            PatchedLSTM,
-
-        # Bidirectional (patch inner LSTM)
-        "Bidirectional":
-            PatchedBidirectional,
-
-        "keras.layers.Bidirectional":
-            PatchedBidirectional,
-
-        # Dense
-        "Dense":
-            PatchedDense,
-
-        "keras.layers.Dense":
-            PatchedDense,
-
-        "keras.src.layers.core.dense.Dense":
-            PatchedDense,
-
-        # MultiHeadAttention
-        "MultiHeadAttention":
-            PatchedMultiHeadAttention,
-
-        "keras.layers.MultiHeadAttention":
-            PatchedMultiHeadAttention,
-
-        "keras.src.layers.attention.multi_head_attention.MultiHeadAttention":
-            PatchedMultiHeadAttention,
-
-        # BatchNormalization
-        "BatchNormalization":
-            PatchedBatchNormalization,
-
-        "keras.layers.BatchNormalization":
-            PatchedBatchNormalization,
-
-        "keras.src.layers.normalization.batch_normalization.BatchNormalization":
-            PatchedBatchNormalization
-    },
-
-    safe_mode=False
+        "CustomDenseMaju": CustomDenseMaju,
+        "CustomLayers>CustomDenseMaju": CustomDenseMaju,
+        
+        # Fallback string mapping untuk pengaman ganda di dictionary custom_objects
+        "LSTM": PatchedLSTM,
+        "keras.layers.LSTM": PatchedLSTM,
+        
+        "Bidirectional": PatchedBidirectional,
+        "keras.layers.Bidirectional": PatchedBidirectional,
+        
+        "Dense": PatchedDense,
+        "keras.layers.Dense": PatchedDense,
+        "keras.src.layers.core.dense.Dense": PatchedDense,
+        
+        "MultiHeadAttention": PatchedMultiHeadAttention,
+        "keras.layers.MultiHeadAttention": PatchedMultiHeadAttention,
+        "keras.src.layers.attention.multi_head_attention.MultiHeadAttention": PatchedMultiHeadAttention,
+        
+        "BatchNormalization": PatchedBatchNormalization,
+        "keras.layers.BatchNormalization": PatchedBatchNormalization,
+        "keras.src.layers.normalization.batch_normalization.BatchNormalization": PatchedBatchNormalization,
+        
+        "Orthogonal": Orthogonal,
+        "keras.initializers.Orthogonal": Orthogonal
+    }
 )
 
 scaler = joblib.load(
