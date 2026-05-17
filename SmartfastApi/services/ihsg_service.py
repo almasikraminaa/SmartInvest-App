@@ -11,63 +11,6 @@ from services.genai_service import (
 )
 
 # ==========================
-# CUSTOM LAYER
-# ==========================
-
-@keras.saving.register_keras_serializable(
-    package="CustomLayers"
-)
-class CustomDenseMaju(
-    keras.layers.Layer
-):
-    def __init__(
-        self,
-        units=32,
-        activation=None,
-        l2_reg=0.001,
-        **kwargs
-    ):
-        super().__init__(**kwargs)
-        self.units = units
-        self.activation = keras.activations.get(activation)
-        self.l2_reg = l2_reg
-
-    def build(
-        self,
-        input_shape
-    ):
-        self.w = self.add_weight(
-            name="kernel",
-            shape=(input_shape[-1], self.units),
-            initializer="random_normal",
-            regularizer=keras.regularizers.l2(self.l2_reg),
-            trainable=True
-        )
-        self.b = self.add_weight(
-            name="bias",
-            shape=(self.units,),
-            initializer="zeros",
-            trainable=True
-        )
-
-    def call(
-        self,
-        inputs
-    ):
-        result = tf.matmul(inputs, self.w) + self.b
-        return self.activation(result) if self.activation else result
-
-    def get_config(self):
-        config = super().get_config()
-        config.update({
-            "units": self.units,
-            "activation": keras.activations.serialize(self.activation),
-            "l2_reg": self.l2_reg
-        })
-        return config
-
-
-# ==========================
 # PATH
 # ==========================
 
@@ -97,16 +40,12 @@ DATA_PATH = (
 
 
 # ==========================
-# LOAD MODEL (Pure Keras 2 Loader)
+# LOAD MODEL (Murni Keras 2 Loader Tanpa Custom Objects)
 # ==========================
 
 model = tf.keras.models.load_model(
     str(MODEL_PATH),
-    compile=False,
-    custom_objects={
-        "CustomDenseMaju": CustomDenseMaju,
-        "CustomLayers>CustomDenseMaju": CustomDenseMaju
-    }
+    compile=False
 )
 
 scaler = joblib.load(
