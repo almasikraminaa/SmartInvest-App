@@ -206,25 +206,27 @@ model = tf.keras.models.load_model(
         "CustomLayers>CustomDenseMaju":
             CustomDenseMaju,
             
-        # Registrasi Patch untuk format string bervariasi
+        # MultiHeadAttention patch
         "MultiHeadAttention": PatchedMultiHeadAttention,
         "keras.layers.MultiHeadAttention": PatchedMultiHeadAttention,
         "keras.src.layers.multi_head_attention.MultiHeadAttention": PatchedMultiHeadAttention,
         
+        # BatchNormalization patch
         "BatchNormalization": PatchedBatchNormalization,
         "keras.layers.BatchNormalization": PatchedBatchNormalization,
         "keras.src.layers.normalization.batch_normalization.BatchNormalization": PatchedBatchNormalization,
         
+        # REBUT PANGGILAN "Dense" UTAMA AGAR SELESAI DARI ERROR QUANTIZATION
         "Dense": PatchedDense,
         "keras.layers.Dense": PatchedDense,
         "keras.src.layers.core.dense.Dense": PatchedDense,
         
+        # Initializer patch
         "Orthogonal": Orthogonal,
         "keras.initializers.Orthogonal": Orthogonal,
         "keras.src.initializers.orthogonal.Orthogonal": Orthogonal
     }
 )
-
 scaler = joblib.load(
     SCALER_PATH
 )
