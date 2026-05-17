@@ -40,27 +40,27 @@ DATA_PATH = (
 
 
 # ==============================================================================
-# SAKTI CORE REGISTRY OVERRIDE UNTUK MODEL IHSG (PURE .keras FORMAT)
+# ULTIMATE SERIALIZATION PATCH UNTUK ARSITEKTUR FUNCTIONAL (KERAS 3)
 # ==============================================================================
 
-OriginalDense = keras.layers.Dense
-OriginalMHA = keras.layers.MultiHeadAttention
-OriginalBN = keras.layers.BatchNormalization
-
-class PatchedDense(OriginalDense):
+@keras.saving.register_keras_serializable(package="keras.layers", name="Dense")
+class PatchedDense(keras.layers.Dense):
     @classmethod
     def from_config(cls, config):
+        # Buang paksa parameter Keras 2 yang bikin crash di Keras 3
         config.pop("quantization_config", None)
         return super().from_config(config)
 
-class PatchedMultiHeadAttention(OriginalMHA):
+@keras.saving.register_keras_serializable(package="keras.layers", name="MultiHeadAttention")
+class PatchedMultiHeadAttention(keras.layers.MultiHeadAttention):
     @classmethod
     def from_config(cls, config):
         config.pop("use_gate", None)
         config.pop("seed", None)
         return super().from_config(config)
 
-class PatchedBatchNormalization(OriginalBN):
+@keras.saving.register_keras_serializable(package="keras.layers", name="BatchNormalization")
+class PatchedBatchNormalization(keras.layers.BatchNormalization):
     @classmethod
     def from_config(cls, config):
         config.pop("renorm", None)
@@ -68,31 +68,12 @@ class PatchedBatchNormalization(OriginalBN):
         config.pop("renorm_momentum", None)
         return super().from_config(config)
 
-# Paksa suntikkan ke memori core runtime registry Keras 3
-keras.layers.Dense = PatchedDense
-keras.layers.MultiHeadAttention = PatchedMultiHeadAttention
-keras.layers.BatchNormalization = PatchedBatchNormalization
-
-if hasattr(keras, "src"):
-    keras.src.layers.Dense = PatchedDense
-    keras.src.layers.core.dense.Dense = PatchedDense
-    keras.src.layers.MultiHeadAttention = PatchedMultiHeadAttention
-    keras.src.layers.attention.multi_head_attention.MultiHeadAttention = PatchedMultiHeadAttention
-    keras.src.layers.BatchNormalization = PatchedBatchNormalization
-    keras.src.layers.normalization.batch_normalization.BatchNormalization = PatchedBatchNormalization
-    
-    # Intercept jalur legacy serialization engine cadangan
-    import keras.src.legacy.saving.serialization as legacy_serialization
-    if hasattr(legacy_serialization, "legacy_custom_objects"):
-        legacy_serialization.legacy_custom_objects["Dense"] = PatchedDense
-        legacy_serialization.legacy_custom_objects["MultiHeadAttention"] = PatchedMultiHeadAttention
-        legacy_serialization.legacy_custom_objects["BatchNormalization"] = PatchedBatchNormalization
-
 
 # ==========================
 # LOAD MODEL EXECUTION
 # ==========================
 
+# Daftarkan ke custom_objects sebagai jaminan ganda lapis kedua
 model = tf.keras.models.load_model(
     str(MODEL_PATH),
     compile=False,
