@@ -11,4 +11,4 @@ python-dateutil
 tensorflow
 h5py==3.13.0
 numpy==1.26.4
-google-genai
+google-generativeai
