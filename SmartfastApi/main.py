@@ -1,3 +1,23 @@
+# ==============================================================================
+# MONKEY PATCH: Menjembatani Model Keras 3 agar kompatibel di Keras 2 (HF Environment)
+# ==============================================================================
+import sys
+import types
+import keras
+
+if not hasattr(keras, "src"):
+    src_module = types.ModuleType("keras.src")
+    models_module = types.ModuleType("keras.src.models")
+    functional_module = types.ModuleType("keras.src.models.functional")
+    
+    from keras.models import Functional
+    functional_module.Functional = Functional
+    
+    sys.modules["keras.src"] = src_module
+    sys.modules["keras.src.models"] = models_module
+    sys.modules["keras.src.models.functional"] = functional_module
+# ==============================================================================
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,8 +35,6 @@ from routes.portfolio import (
 from routes.ihsg import (
     router as ihsg_router
 )
-
-
 
 
 # ==========================
@@ -91,4 +109,3 @@ app.include_router(
     prefix="/api",
     tags=["IHSG Prediction"]
 )
-
