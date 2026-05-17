@@ -2,7 +2,7 @@ name: Sync to Hugging Face Spaces
 
 on:
   push:
-    branches: [ main ] # Ganti 'main' jika nama branch utama GitHub kamu berbeda (misal: 'master')
+    branches: [ main ] # Ganti 'main' jika nama branch utama GitHub kamu berbeda
 
 jobs:
   deploy:
@@ -14,24 +14,25 @@ jobs:
         fetch-depth: 0
         lfs: true
 
-    - name: Push Folder SmartfastApi to HF
+    - name: Push Folder SmartfastApi to HF (Tanpa Hapus Model)
       env:
         HF_TOKEN: ${{ secrets.HF_TOKEN }}
       run: |
-        # 1. Masuk ke folder backend kamu
-        cd SmartfastApi
+        # 1. Clone repository Hugging Face yang ada saat ini ke folder sementara
+        git clone https://GALIHPP123:$HF_TOKEN@huggingface.co/spaces/GALIHPP123/SmartInvestAPI hf_space
         
-        # 2. Inisialisasi git baru khusus di dalam folder ini agar dia jadi root
-        git init -b main
+        # 2. Ambil isi folder SmartfastApi dari GitHub, copy ke folder clone tadi
+        # Menggunakan rsync untuk copy semua file KECUALI folder models
+        mkdir -p hf_space/models
+        rsync -av --exclude='models/' SmartfastApi/ hf_space/
+        
+        # 3. Masuk ke folder Hugging Face, commit, dan push
+        cd hf_space
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         
-        # 3. Add semua file yang ada di dalam folder SmartfastApi
         git add .
-        git commit -m "Deploy backend from GitHub Actions"
+        # Cek apakah ada perubahan kode, jika ada baru commit
+        git diff-index --quiet HEAD || git commit -m "Deploy backend logic from GitHub Actions"
         
-        # 4. Tambahkan remote Hugging Face (Sudah otomatis pakai akun GALIHPP123 dan Space SmartInvestAPI)
-        git remote add hf https://GALIHPP123:$HF_TOKEN@huggingface.co/spaces/GALIHPP123/SmartInvestAPI
-        
-        # 5. Paksa push ke Hugging Face
-        git push --force hf main
+        git push origin main
