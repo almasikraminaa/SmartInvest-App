@@ -1,0 +1,37 @@
+name: Sync to Hugging Face Spaces
+
+on:
+  push:
+    branches: [ main ] # Ganti 'main' jika nama branch utama GitHub kamu berbeda (misal: 'master')
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        lfs: true
+
+    - name: Push Folder SmartfastApi to HF
+      env:
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      run: |
+        # 1. Masuk ke folder backend kamu
+        cd SmartfastApi
+        
+        # 2. Inisialisasi git baru khusus di dalam folder ini agar dia jadi root
+        git init -b main
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        
+        # 3. Add semua file yang ada di dalam folder SmartfastApi
+        git add .
+        git commit -m "Deploy backend from GitHub Actions"
+        
+        # 4. Tambahkan remote Hugging Face (Sudah otomatis pakai akun GALIHPP123 dan Space SmartInvestAPI)
+        git remote add hf https://GALIHPP123:$HF_TOKEN@huggingface.co/spaces/GALIHPP123/SmartInvestAPI
+        
+        # 5. Paksa push ke Hugging Face
+        git push --force hf main
