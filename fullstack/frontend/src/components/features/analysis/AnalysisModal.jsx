@@ -1,5 +1,5 @@
 // src/components/features/analysis/AnalysisModal.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { validateAnalysisForm } from '../../../utils/validateAnalysisForm';
 
 const METHODS = [
@@ -13,10 +13,9 @@ const TARGET_INDICES = [
   { value: '', label: 'Select index...' },
   { value: 'LQ45', label: 'LQ45' },
   { value: 'IDX30', label: 'IDX30' },
-  { value: 'JII', label: 'JII' },
 ];
 
-export default function AnalysisModal({ isOpen, onClose, onAnalysisComplete }) {
+export default function AnalysisModal({ isOpen, onClose, onAnalysisComplete, preSelectedMethod = '' }) {
   const [formData, setFormData] = useState({
     method: '',
     targetIndex: '',
@@ -28,6 +27,12 @@ export default function AnalysisModal({ isOpen, onClose, onAnalysisComplete }) {
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
+  // Pre-fill method saat modal dibuka dengan preSelectedMethod
+  useEffect(() => {
+    if (isOpen && preSelectedMethod) {
+      setFormData((prev) => ({ ...prev, method: preSelectedMethod }));
+    }
+  }, [isOpen, preSelectedMethod]);
   const handleChange = (field) => (e) => {
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
     // Clear field-level error when user edits the field
@@ -85,6 +90,25 @@ export default function AnalysisModal({ isOpen, onClose, onAnalysisComplete }) {
       clearTimeout(timeoutId);
 
       if (response.ok) {
+        const result = await response.json().catch(() => ({}));
+
+        // Simpan ke history database
+        const historyEntry = {
+          analysisId: result.analysisId || `ANL-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+          date: new Date().toISOString().split('T')[0],
+          target: formData.targetIndex,
+          method: formData.method,
+          capital: Number(formData.capitalAllocation),
+          return: result.expectedReturn || 'N/A',
+          risk: result.risk || 'N/A',
+        };
+
+        fetch('/api/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(historyEntry),
+        }).catch(() => {}); // fire-and-forget
+
         // Success: call onAnalysisComplete and close modal
         onAnalysisComplete();
         onClose();
@@ -175,6 +199,8 @@ export default function AnalysisModal({ isOpen, onClose, onAnalysisComplete }) {
                   type="date"
                   value={formData.periodStart}
                   onChange={handleChange('periodStart')}
+                  min="2021-04-01"
+                  max="2026-04-01"
                   disabled={isLoading}
                   className="bg-transparent text-xs font-bold text-smart-navy outline-none border-b border-gray-200 pb-1 disabled:opacity-50"
                 />
@@ -187,6 +213,8 @@ export default function AnalysisModal({ isOpen, onClose, onAnalysisComplete }) {
                   type="date"
                   value={formData.periodEnd}
                   onChange={handleChange('periodEnd')}
+                  min="2021-04-01"
+                  max="2026-04-01"
                   disabled={isLoading}
                   className="bg-transparent text-xs font-bold text-smart-navy outline-none border-b border-gray-200 pb-1 disabled:opacity-50"
                 />

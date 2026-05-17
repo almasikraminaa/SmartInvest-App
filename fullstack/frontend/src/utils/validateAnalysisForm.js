@@ -11,7 +11,7 @@
  */
 
 const VALID_METHODS = ['MVEP', 'SIM', 'CAF'];
-const VALID_INDICES = ['LQ45', 'IDX30', 'JII'];
+const VALID_INDICES = ['LQ45', 'IDX30'];
 const CAPITAL_MIN = 1;
 const CAPITAL_MAX = 999_999_999_999;
 

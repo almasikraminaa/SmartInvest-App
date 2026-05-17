@@ -1,12 +1,20 @@
 // src/pages/HomePage.jsx
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import MarketChart from "../components/MarketChart";
 import StockHighlights from "../components/StockHighlights";
 import AllStocksPage from "../components/AllStocksPage";
 
-export default function HomePage() {
+export default function HomePage({ setIsAnalysisModalOpen }) {
+  const navigate = useNavigate();
   const [showAllStocks, setShowAllStocks] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
   const [visible, setVisible]            = useState(false);
+
+  const handleStartAnalysis = () => {
+    navigate('/analysis');
+    setIsAnalysisModalOpen(true);
+  };
 
   useEffect(() => {
     if (showAllStocks) {
@@ -20,6 +28,7 @@ export default function HomePage() {
   }, [showAllStocks]);
 
   return (
+    <div className="bg-white rounded-xl shadow-sm p-6 min-h-[85vh]">
     <div className="flex flex-col gap-8">
 
       {/* Modal All Stocks */}
@@ -44,13 +53,13 @@ export default function HomePage() {
             Leverage the power of the Minimum Variance Efficient Portfolio (MVEP) method to build a robust, data-driven investment strategy tailored for the Indonesian stock market.
           </p>
           <div className="flex items-center gap-4">
-            <button className="bg-smart-green text-white px-7 py-3 rounded-xl font-bold text-sm hover:bg-[#00b86a] transition-colors flex items-center gap-2">
+            <button onClick={handleStartAnalysis} className="bg-smart-green text-white px-7 py-3 rounded-xl font-bold text-sm hover:bg-[#00b86a] transition-colors flex items-center gap-2">
               Start Analysis
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
               </svg>
             </button>
-            <button className="bg-white/10 text-white px-7 py-3 rounded-xl font-bold text-sm hover:bg-white/20 transition-colors border border-white/10 backdrop-blur-sm">
+            <button onClick={() => navigate('/method')} className="bg-white/10 text-white px-7 py-3 rounded-xl font-bold text-sm hover:bg-white/20 transition-colors border border-white/10 backdrop-blur-sm">
               Learn Our Method
             </button>
           </div>
@@ -77,7 +86,7 @@ export default function HomePage() {
           <p className="text-gray-600 text-sm leading-relaxed mb-6">
             SmartInvest hadir untuk menjembatani tingginya minat investasi saham dengan analisis berbasis data yang solid. Kami menggabungkan teori portofolio kuantitatif (seperti MVEP) dengan Kecerdasan Buatan (AI) untuk membantu Anda mengambil keputusan finansial yang rasional dan terukur, bukan sekadar spekulasi.
           </p>
-          <button className="bg-smart-navy text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity">
+          <button onClick={() => setShowAboutModal(true)} className="bg-smart-navy text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity">
             Baca Selengkapnya...
           </button>
         </div>
@@ -89,21 +98,21 @@ export default function HomePage() {
       {/* 4. Method Cards */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-2">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col items-center text-center hover:shadow-md transition-shadow">
-          <div className="w-14 h-14 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mb-5">
+          <div onClick={() => navigate('/method#mvep')} className="w-14 h-14 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mb-5 cursor-pointer hover:scale-110 transition-transform">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
           </div>
           <h3 className="text-lg font-bold text-smart-navy mb-3">MVEP</h3>
           <p className="text-gray-500 text-sm leading-relaxed">Minimum Variance Efficient Portfolio: Mengoptimalkan bobot aset Anda untuk meminimalkan risiko pada tingkat return tertentu.</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col items-center text-center hover:shadow-md transition-shadow">
-          <div className="w-14 h-14 bg-green-50 text-smart-green rounded-2xl flex items-center justify-center mb-5">
+          <div onClick={() => navigate('/method#sim')} className="w-14 h-14 bg-green-50 text-smart-green rounded-2xl flex items-center justify-center mb-5 cursor-pointer hover:scale-110 transition-transform">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
           </div>
           <h3 className="text-lg font-bold text-smart-navy mb-3">SIM</h3>
           <p className="text-gray-500 text-sm leading-relaxed">Single Index Model: Mengukur risiko dan return saham berdasarkan pergerakan pasar secara keseluruhan untuk mendapatkan portofolio optimal.</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col items-center text-center hover:shadow-md transition-shadow">
-          <div className="w-14 h-14 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center mb-5">
+          <div onClick={() => navigate('/method#caf')} className="w-14 h-14 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center mb-5 cursor-pointer hover:scale-110 transition-transform">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
           </div>
           <h3 className="text-lg font-bold text-smart-navy mb-3">CAF</h3>
@@ -111,6 +120,26 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Modal About Us (kosong) */}
+      {showAboutModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-smart-navy/60 backdrop-blur-md p-6 animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-lg p-8 shadow-2xl border border-gray-100 flex flex-col gap-4">
+            <h2 className="text-xl font-bold text-smart-navy">About SmartInvest</h2>
+            <div className="min-h-[200px] flex items-center justify-center text-gray-300 text-sm">
+              {/* Konten akan ditambahkan nanti */}
+              <p>Konten selengkapnya akan ditampilkan di sini.</p>
+            </div>
+            <button
+              onClick={() => setShowAboutModal(false)}
+              className="self-end bg-gray-100 text-gray-600 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
+
+    </div>
     </div>
   );
 }
