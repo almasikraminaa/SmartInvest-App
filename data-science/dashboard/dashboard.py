@@ -1,4 +1,5 @@
 import streamlit as st
+from pathlib import Path
 import pandas as pd
 from datetime import date
 
@@ -47,6 +48,16 @@ from utils.helper import (
     get_highest_return_model
 )
 
+# =========================================================
+# LOAD CSS
+# =========================================================
+
+def load_css(file_path):
+    with open(file_path) as f:
+        st.markdown(
+            f"<style>{f.read()}</style>",
+            unsafe_allow_html=True
+        )
 
 # =========================================================
 # PAGE CONFIG
@@ -58,6 +69,7 @@ st.set_page_config(
     layout="wide"
 )
 
+load_css(Path("assets/style.css"))
 
 # =========================================================
 # INDEX MAP
