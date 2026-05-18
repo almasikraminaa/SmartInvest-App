@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -192,9 +193,7 @@ def plot_risk_return_scatter(eda_stock_summary, index_name):
         title=f"Risk vs Return Saham {index_name}"
     )
 
-    fig.update_traces(
-        textposition="top center"
-    )
+    fig.update_traces(textposition="top center")
 
     fig.update_layout(
         xaxis_title="Annualized Volatility",
@@ -260,10 +259,34 @@ def plot_rolling_volatility(rolling_volatility, selected_tickers, index_name):
 # PORTFOLIO VISUALIZATION
 # =========================================================
 
-def plot_portfolio_allocation(weights_df, method_name):
+def _prepare_positive_weights(weights_df):
     plot_df = weights_df.copy()
 
-    plot_df = plot_df[plot_df["Weight"] > 0]
+    if "Weight" not in plot_df.columns:
+        return plot_df.iloc[0:0]
+
+    plot_df = plot_df.replace([np.inf, -np.inf], np.nan)
+    plot_df = plot_df.dropna(subset=["Weight"])
+    plot_df = plot_df[plot_df["Weight"] > 0].copy()
+
+    if plot_df.empty:
+        return plot_df
+
+    total_weight = plot_df["Weight"].sum()
+
+    if total_weight <= 0:
+        return plot_df.iloc[0:0]
+
+    plot_df["Weight"] = plot_df["Weight"] / total_weight
+
+    return plot_df
+
+
+def plot_portfolio_allocation(weights_df, method_name):
+    plot_df = _prepare_positive_weights(weights_df)
+
+    if plot_df.empty:
+        return None
 
     fig = px.pie(
         plot_df,
@@ -287,9 +310,11 @@ def plot_portfolio_allocation(weights_df, method_name):
 
 
 def plot_portfolio_allocation_bar(weights_df, method_name):
-    plot_df = weights_df.copy()
+    plot_df = _prepare_positive_weights(weights_df)
 
-    plot_df = plot_df[plot_df["Weight"] > 0]
+    if plot_df.empty:
+        return None
+
     plot_df = plot_df.sort_values(by="Weight", ascending=False)
 
     fig = px.bar(
@@ -315,7 +340,12 @@ def plot_portfolio_allocation_bar(weights_df, method_name):
 
 
 def plot_portfolio_cumulative_return(portfolio_daily_return, investment_amount, method_name):
-    portfolio_cumulative_return = (1 + portfolio_daily_return).cumprod()
+    """
+    portfolio_daily_return berasal dari log return.
+    Maka cumulative return yang benar adalah exp(cumsum(log_return)).
+    """
+
+    portfolio_cumulative_return = np.exp(portfolio_daily_return.cumsum())
     portfolio_value = portfolio_cumulative_return * investment_amount
 
     fig = go.Figure()
@@ -388,12 +418,19 @@ def plot_model_comparison(comparison_df):
 
 
 def plot_model_return_risk_scatter(comparison_df):
+    plot_df = comparison_df.copy()
+
+    plot_df["Sharpe Size"] = plot_df["Sharpe Ratio"].abs()
+
+    if plot_df["Sharpe Size"].sum() == 0:
+        plot_df["Sharpe Size"] = 1
+
     fig = px.scatter(
-        comparison_df,
+        plot_df,
         x="Annual Risk",
         y="Annual Return",
         text="Model",
-        size="Sharpe Ratio",
+        size="Sharpe Size",
         hover_data=[
             "Model",
             "Annual Return",
@@ -404,9 +441,7 @@ def plot_model_return_risk_scatter(comparison_df):
         title="Risk vs Return Comparison antar Model"
     )
 
-    fig.update_traces(
-        textposition="top center"
-    )
+    fig.update_traces(textposition="top center")
 
     fig.update_layout(
         xaxis_title="Annual Risk",
@@ -419,10 +454,20 @@ def plot_model_return_risk_scatter(comparison_df):
 
 
 def plot_selected_portfolio_risk_return(weights_df, method_name):
-    if "annualized_volatility" not in weights_df.columns or "annualized_return" not in weights_df.columns:
-        return None
+    required_columns = [
+        "Weight",
+        "annualized_volatility",
+        "annualized_return"
+    ]
 
-    plot_df = weights_df.copy()
+    for col in required_columns:
+        if col not in weights_df.columns:
+            return None
+
+    plot_df = _prepare_positive_weights(weights_df)
+
+    if plot_df.empty:
+        return None
 
     fig = px.scatter(
         plot_df,
@@ -441,9 +486,7 @@ def plot_selected_portfolio_risk_return(weights_df, method_name):
         title=f"Risk vs Return Saham dalam Portfolio - {method_name}"
     )
 
-    fig.update_traces(
-        textposition="top center"
-    )
+    fig.update_traces(textposition="top center")
 
     fig.update_layout(
         xaxis_title="Annualized Volatility",
@@ -497,4 +540,3 @@ def format_comparison_table(comparison_df):
             formatted_df[col] = formatted_df[col] * 100
 
     return formatted_df
-    

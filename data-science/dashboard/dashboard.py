@@ -10,11 +10,7 @@ from utils.data_loader import (
 
 from utils.dynamic_filtering import dynamic_filtering
 from utils.feature_engineering import feature_engineering
-from utils.portfolio_models import (
-    run_selected_model,
-    compare_all_models
-)
-
+from utils.portfolio_models import compare_all_models
 from utils.eda import run_eda
 
 from utils.visualization import (
@@ -91,6 +87,34 @@ index_map = {
 
 
 # =========================================================
+# HELPER DASHBOARD
+# =========================================================
+
+def prepare_positive_portfolio_weights(weights_df, investment_amount):
+    df = weights_df.copy()
+
+    if "Weight" not in df.columns:
+        return df.iloc[0:0]
+
+    df = df.replace([float("inf"), float("-inf")], pd.NA)
+    df = df.dropna(subset=["Weight"])
+    df = df[df["Weight"] > 0].copy()
+
+    if df.empty:
+        return df
+
+    total_weight = df["Weight"].sum()
+
+    if total_weight <= 0:
+        return df.iloc[0:0]
+
+    df["Weight"] = df["Weight"] / total_weight
+    df["Allocation"] = df["Weight"] * investment_amount
+
+    return df
+
+
+# =========================================================
 # LOAD DATA
 # =========================================================
 
@@ -101,6 +125,18 @@ def load_all_data():
     bi_rate_daily = load_bi_rate()
 
     return price_matrix, market_price, bi_rate_daily
+
+
+@st.cache_data
+def cached_run_eda(index_choice, price_matrix, index_map):
+    return run_eda(
+        index_choice=index_choice,
+        price_matrix=price_matrix,
+        index_map=index_map,
+        trading_days=252,
+        risk_free_rate=0.05,
+        top_n=10
+    )
 
 
 price_matrix, market_price, bi_rate_daily = load_all_data()
@@ -134,9 +170,17 @@ st.sidebar.caption(
     f"Available data: {min_date} until {max_date}"
 )
 
+default_start_date = date(2023, 6, 21)
+
+if default_start_date < min_date:
+    default_start_date = min_date
+
+if default_start_date > max_date:
+    default_start_date = min_date
+
 start_date = st.sidebar.date_input(
     "Start Date",
-    value=date(2023, 6, 21),
+    value=default_start_date,
     min_value=min_date,
     max_value=max_date
 )
@@ -173,6 +217,7 @@ st.sidebar.caption(
 
 if "analysis_result" not in st.session_state:
     st.session_state.analysis_result = None
+
 
 if run_button:
     try:
@@ -227,6 +272,7 @@ if run_button:
 # =========================================================
 
 st.title("📈 SmartInvest Dashboard")
+
 st.markdown(
     """
     SmartInvest adalah dashboard analisis saham dan rekomendasi portofolio berbasis
@@ -268,14 +314,10 @@ with tab_eda:
     )
 
     with st.spinner(f"Menjalankan EDA untuk {eda_index_choice}..."):
-
-        eda_result = run_eda(
+        eda_result = cached_run_eda(
             index_choice=eda_index_choice,
             price_matrix=price_matrix,
-            index_map=index_map,
-            trading_days=252,
-            risk_free_rate=0.05,
-            top_n=10
+            index_map=index_map
         )
 
     kpi = eda_result["kpi_summary"]
@@ -284,25 +326,10 @@ with tab_eda:
 
     col1, col2, col3, col4 = st.columns(4)
 
-    col1.metric(
-        "Total Saham",
-        kpi["total_stocks"]
-    )
-
-    col2.metric(
-        "Average Return",
-        format_percent(kpi["avg_return"])
-    )
-
-    col3.metric(
-        "Average Volatility",
-        format_percent(kpi["avg_volatility"])
-    )
-
-    col4.metric(
-        "Average Sharpe",
-        format_decimal(kpi["avg_sharpe"])
-    )
+    col1.metric("Total Saham", kpi["total_stocks"])
+    col2.metric("Average Return", format_percent(kpi["avg_return"]))
+    col3.metric("Average Volatility", format_percent(kpi["avg_volatility"]))
+    col4.metric("Average Sharpe", format_decimal(kpi["avg_sharpe"]))
 
     col5, col6, col7 = st.columns(3)
 
@@ -392,6 +419,7 @@ with tab_eda:
         eda_result["top_sharpe"],
         eda_index_choice
     )
+
     st.plotly_chart(fig_sharpe, use_container_width=True)
 
     st.dataframe(
@@ -407,6 +435,7 @@ with tab_eda:
         eda_result["eda_stock_summary"],
         eda_index_choice
     )
+
     st.plotly_chart(fig_risk_return, use_container_width=True)
 
     st.divider()
@@ -417,6 +446,7 @@ with tab_eda:
         eda_result["correlation_matrix"],
         eda_index_choice
     )
+
     st.plotly_chart(fig_heatmap, use_container_width=True)
 
     st.divider()
@@ -463,13 +493,18 @@ with tab_portfolio:
 
         user_input = result["user_input"]
         filtered_result = result["filtered_result"]
-        feature_result = result["feature_result"]
-        all_model_result = result["all_model_result"]
         selected_result = result["selected_result"]
+        all_model_result = result["all_model_result"]
 
         filtering_summary = filtered_result["filtering_summary"]
         comparison_df = all_model_result["comparison_df"]
-        weights_df = selected_result["weights"]
+
+        raw_weights_df = selected_result["weights"]
+
+        weights_df = prepare_positive_portfolio_weights(
+            raw_weights_df,
+            user_input["investment_amount"]
+        )
 
         st.subheader("Input Summary")
 
@@ -490,25 +525,10 @@ with tab_portfolio:
 
         col5, col6, col7, col8 = st.columns(4)
 
-        col5.metric(
-            "Initial Tickers",
-            filtering_summary["initial_ticker_count"]
-        )
-
-        col6.metric(
-            "Available Tickers",
-            filtering_summary["available_ticker_count"]
-        )
-
-        col7.metric(
-            "Valid Tickers",
-            filtering_summary["valid_ticker_count"]
-        )
-
-        col8.metric(
-            "Removed Tickers",
-            filtering_summary["removed_ticker_count"]
-        )
+        col5.metric("Initial Tickers", filtering_summary["initial_ticker_count"])
+        col6.metric("Available Tickers", filtering_summary["available_ticker_count"])
+        col7.metric("Valid Tickers", filtering_summary["valid_ticker_count"])
+        col8.metric("Removed Tickers", filtering_summary["removed_ticker_count"])
 
         with st.expander("Lihat Detail Filtering"):
             st.json(filtering_summary)
@@ -536,8 +556,15 @@ with tab_portfolio:
 
         col12.metric(
             "Number of Stocks",
-            len(weights_df[weights_df["Weight"] > 0])
+            len(weights_df)
         )
+
+        if weights_df.empty:
+            st.error(
+                "Tidak ada bobot portfolio positif yang dapat ditampilkan. "
+                "Silakan coba periode, indeks, atau metode lain."
+            )
+            st.stop()
 
         st.divider()
 
@@ -550,14 +577,22 @@ with tab_portfolio:
                 weights_df,
                 selected_result["method"]
             )
-            st.plotly_chart(fig_pie, use_container_width=True)
+
+            if fig_pie is not None:
+                st.plotly_chart(fig_pie, use_container_width=True)
+            else:
+                st.warning("Grafik pie tidak tersedia.")
 
         with col14:
             fig_bar = plot_portfolio_allocation_bar(
                 weights_df,
                 selected_result["method"]
             )
-            st.plotly_chart(fig_bar, use_container_width=True)
+
+            if fig_bar is not None:
+                st.plotly_chart(fig_bar, use_container_width=True)
+            else:
+                st.warning("Grafik bar tidak tersedia.")
 
         st.divider()
 
