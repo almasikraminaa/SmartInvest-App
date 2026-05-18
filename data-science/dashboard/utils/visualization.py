@@ -220,7 +220,7 @@ def plot_cumulative_return(cumulative_return, selected_tickers, index_name):
             )
 
     fig.update_layout(
-        title=f"Cumulative Return Saham {index_name}",
+        title=f"Cumulative Return Top 5 Saham {index_name}",
         xaxis_title="Date",
         yaxis_title="Cumulative Return",
         template="plotly_white",
@@ -245,7 +245,7 @@ def plot_rolling_volatility(rolling_volatility, selected_tickers, index_name):
             )
 
     fig.update_layout(
-        title=f"30-Day Rolling Volatility Saham {index_name}",
+        title=f"30-Day Rolling Volatility Top 5 Saham {index_name}",
         xaxis_title="Date",
         yaxis_title="Annualized Volatility",
         template="plotly_white",
@@ -292,8 +292,8 @@ def plot_portfolio_allocation(weights_df, method_name):
         plot_df,
         names="Ticker",
         values="Weight",
-        title=f"Portfolio Allocation - {method_name}",
-        hole=0.35
+        title=f"Komposisi Portfolio {method_name}",
+        hole=0.4
     )
 
     fig.update_traces(
@@ -310,18 +310,23 @@ def plot_portfolio_allocation(weights_df, method_name):
 
 
 def plot_portfolio_allocation_bar(weights_df, method_name):
-    plot_df = _prepare_positive_weights(weights_df)
+    plot_df = weights_df.copy()
+
+    if "Weight" not in plot_df.columns:
+        return None
+
+    plot_df = plot_df.replace([np.inf, -np.inf], np.nan)
+    plot_df = plot_df.dropna(subset=["Weight"])
+    plot_df = plot_df.sort_values(by="Weight", ascending=False)
 
     if plot_df.empty:
         return None
-
-    plot_df = plot_df.sort_values(by="Weight", ascending=False)
 
     fig = px.bar(
         plot_df,
         x="Ticker",
         y="Weight",
-        title=f"Portfolio Weight Allocation - {method_name}",
+        title=f"Bobot Portfolio {method_name}",
         text="Weight"
     )
 
@@ -330,22 +335,31 @@ def plot_portfolio_allocation_bar(weights_df, method_name):
         textposition="outside"
     )
 
+    fig.add_hline(
+        y=0,
+        line_width=1,
+        line_color="black"
+    )
+
     fig.update_layout(
         xaxis_title="Ticker",
         yaxis_title="Weight",
-        template="plotly_white"
+        template="plotly_white",
+        height=500
     )
 
     return fig
 
 
-def plot_portfolio_cumulative_return(portfolio_daily_return, investment_amount, method_name):
-    """
-    portfolio_daily_return berasal dari log return.
-    Maka cumulative return yang benar adalah exp(cumsum(log_return)).
-    """
+def plot_portfolio_cumulative_return(
+    portfolio_daily_return,
+    investment_amount,
+    method_name
+):
+    portfolio_cumulative_return = np.exp(
+        portfolio_daily_return.cumsum()
+    )
 
-    portfolio_cumulative_return = np.exp(portfolio_daily_return.cumsum())
     portfolio_value = portfolio_cumulative_return * investment_amount
 
     fig = go.Figure()
@@ -370,33 +384,37 @@ def plot_portfolio_cumulative_return(portfolio_daily_return, investment_amount, 
     return fig
 
 
+# =========================================================
+# MODEL COMPARISON VISUALIZATION
+# =========================================================
+
 def plot_model_comparison(comparison_df):
     fig = go.Figure()
 
     fig.add_trace(
         go.Bar(
             x=comparison_df["Model"],
-            y=comparison_df["Annual Return"],
-            name="Annual Return",
-            text=comparison_df["Annual Return"]
+            y=comparison_df["Annualized_Return"],
+            name="Annualized Return",
+            text=comparison_df["Annualized_Return"]
         )
     )
 
     fig.add_trace(
         go.Bar(
             x=comparison_df["Model"],
-            y=comparison_df["Annual Risk"],
-            name="Annual Risk",
-            text=comparison_df["Annual Risk"]
+            y=comparison_df["Annualized_Volatility"],
+            name="Annualized Volatility",
+            text=comparison_df["Annualized_Volatility"]
         )
     )
 
     fig.add_trace(
         go.Bar(
             x=comparison_df["Model"],
-            y=comparison_df["Sharpe Ratio"],
+            y=comparison_df["Sharpe_Ratio"],
             name="Sharpe Ratio",
-            text=comparison_df["Sharpe Ratio"]
+            text=comparison_df["Sharpe_Ratio"]
         )
     )
 
@@ -407,7 +425,7 @@ def plot_model_comparison(comparison_df):
 
     fig.update_layout(
         title="Perbandingan Performa Model Portfolio",
-        xaxis_title="Model",
+        xaxis_title="Model Portfolio",
         yaxis_title="Value",
         barmode="group",
         template="plotly_white",
@@ -420,34 +438,151 @@ def plot_model_comparison(comparison_df):
 def plot_model_return_risk_scatter(comparison_df):
     plot_df = comparison_df.copy()
 
-    plot_df["Sharpe Size"] = plot_df["Sharpe Ratio"].abs()
+    plot_df["Sharpe_Size"] = plot_df["Sharpe_Ratio"].abs()
 
-    if plot_df["Sharpe Size"].sum() == 0:
-        plot_df["Sharpe Size"] = 1
+    if plot_df["Sharpe_Size"].sum() == 0:
+        plot_df["Sharpe_Size"] = 1
 
     fig = px.scatter(
         plot_df,
-        x="Annual Risk",
-        y="Annual Return",
+        x="Annualized_Volatility",
+        y="Annualized_Return",
         text="Model",
-        size="Sharpe Size",
+        size="Sharpe_Size",
         hover_data=[
             "Model",
-            "Annual Return",
-            "Annual Risk",
-            "Sharpe Ratio",
-            "Number of Stocks"
+            "Annualized_Return",
+            "Annualized_Volatility",
+            "Sharpe_Ratio",
+            "Portfolio_Beta",
+            "Portfolio_Alpha",
+            "Selected_Stock_Count"
         ],
-        title="Risk vs Return Comparison antar Model"
+        title="Risk vs Return Portfolio Comparison"
     )
 
     fig.update_traces(textposition="top center")
 
     fig.update_layout(
-        xaxis_title="Annual Risk",
-        yaxis_title="Annual Return",
+        xaxis_title="Annualized Volatility",
+        yaxis_title="Annualized Return",
         template="plotly_white",
         height=550
+    )
+
+    return fig
+
+
+def plot_portfolio_beta_comparison(comparison_df):
+    beta_alpha_df = comparison_df.dropna(
+        subset=["Portfolio_Beta"]
+    ).copy()
+
+    if beta_alpha_df.empty:
+        return None
+
+    fig = px.bar(
+        beta_alpha_df,
+        x="Model",
+        y="Portfolio_Beta",
+        title="Perbandingan Portfolio Beta",
+        text="Portfolio_Beta"
+    )
+
+    fig.update_traces(
+        texttemplate="%{text:.4f}",
+        textposition="outside"
+    )
+
+    fig.update_layout(
+        xaxis_title="Model Portfolio",
+        yaxis_title="Portfolio Beta",
+        template="plotly_white",
+        height=500
+    )
+
+    return fig
+
+
+def plot_portfolio_alpha_comparison(comparison_df):
+    beta_alpha_df = comparison_df.dropna(
+        subset=["Portfolio_Alpha"]
+    ).copy()
+
+    if beta_alpha_df.empty:
+        return None
+
+    fig = px.bar(
+        beta_alpha_df,
+        x="Model",
+        y="Portfolio_Alpha",
+        title="Perbandingan Portfolio Alpha",
+        text="Portfolio_Alpha"
+    )
+
+    fig.update_traces(
+        texttemplate="%{text:.2%}",
+        textposition="outside"
+    )
+
+    fig.update_layout(
+        xaxis_title="Model Portfolio",
+        yaxis_title="Portfolio Alpha",
+        template="plotly_white",
+        height=500
+    )
+
+    return fig
+
+
+def plot_portfolio_weight_comparison(portfolio_weight_comparison, model_name):
+    column_map = {
+        "MVEP": "MVEP_Weight",
+        "SIM": "SIM_Weight",
+        "CAPM": "CAPM_Weight"
+    }
+
+    weight_col = column_map.get(model_name)
+
+    if weight_col is None or weight_col not in portfolio_weight_comparison.columns:
+        return None
+
+    plot_df = portfolio_weight_comparison[
+        portfolio_weight_comparison[weight_col] != 0
+    ].copy()
+
+    if plot_df.empty:
+        return None
+
+    plot_df = plot_df.sort_values(
+        by=weight_col,
+        ascending=False
+    )
+
+    fig = px.bar(
+        plot_df,
+        x="Ticker",
+        y=weight_col,
+        title=f"Bobot Portfolio {model_name}",
+        text=weight_col
+    )
+
+    fig.update_traces(
+        texttemplate="%{text:.2%}",
+        textposition="outside"
+    )
+
+    fig.add_hline(
+        y=0,
+        line_width=1,
+        line_color="black"
+    )
+
+    fig.update_layout(
+        xaxis_title="Ticker",
+        yaxis_title="Weight",
+        template="plotly_white",
+        height=500
     )
 
     return fig
@@ -499,7 +634,7 @@ def plot_selected_portfolio_risk_return(weights_df, method_name):
 
 
 # =========================================================
-# TABLE FORMATTER
+# TABLE FORMATTER OPTIONAL
 # =========================================================
 
 def format_weights_table(weights_df):
@@ -519,7 +654,11 @@ def format_weights_table(weights_df):
             "annualized_return",
             "annualized_volatility",
             "beta",
-            "sharpe_ratio"
+            "Beta",
+            "sharpe_ratio",
+            "expected_return",
+            "Expected_Return_CAPM",
+            "Excess_Return"
         ]
         if col in formatted_df.columns
     ]
@@ -531,8 +670,9 @@ def format_comparison_table(comparison_df):
     formatted_df = comparison_df.copy()
 
     percent_columns = [
-        "Annual Return",
-        "Annual Risk"
+        "Annualized_Return",
+        "Annualized_Volatility",
+        "Portfolio_Alpha"
     ]
 
     for col in percent_columns:

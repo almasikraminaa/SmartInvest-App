@@ -7,9 +7,6 @@ import numpy as np
 # =========================================================
 
 def format_rupiah(value):
-    """
-    Format angka menjadi Rupiah.
-    """
     if pd.isna(value):
         return "-"
 
@@ -17,10 +14,6 @@ def format_rupiah(value):
 
 
 def format_percent(value, decimals=2):
-    """
-    Format angka desimal menjadi persen.
-    Contoh: 0.1234 -> 12.34%
-    """
     if pd.isna(value):
         return "-"
 
@@ -28,9 +21,6 @@ def format_percent(value, decimals=2):
 
 
 def format_number(value, decimals=2):
-    """
-    Format angka biasa.
-    """
     if pd.isna(value):
         return "-"
 
@@ -38,9 +28,6 @@ def format_number(value, decimals=2):
 
 
 def format_decimal(value, decimals=4):
-    """
-    Format angka desimal kecil.
-    """
     if pd.isna(value):
         return "-"
 
@@ -52,107 +39,145 @@ def format_decimal(value, decimals=4):
 # =========================================================
 
 def format_portfolio_table(weights_df):
-    """
-    Format tabel portfolio agar siap ditampilkan di Streamlit.
-    """
-
     df = weights_df.copy()
 
     if "Weight" in df.columns:
-        df["Weight"] = df["Weight"].apply(lambda x: format_percent(x))
+        df["Weight"] = df["Weight"].apply(format_percent)
 
     if "Allocation" in df.columns:
-        df["Allocation"] = df["Allocation"].apply(lambda x: format_rupiah(x))
+        df["Allocation"] = df["Allocation"].apply(format_rupiah)
 
     percent_columns = [
+        "expected_return",
         "annualized_return",
         "annualized_volatility",
         "expected_return_capm",
-        "mean_daily_return",
-        "volatility_daily"
+        "Expected_Return_CAPM",
+        "Excess_Return",
+        "mean_log_return",
+        "std_log_return",
+        "var_log_return",
+        "sum_log_return"
     ]
 
     for col in percent_columns:
         if col in df.columns:
-            df[col] = df[col].apply(lambda x: format_percent(x))
+            df[col] = df[col].apply(format_percent)
 
     decimal_columns = [
         "beta",
+        "Beta",
         "alpha",
         "sharpe_ratio",
         "ERB",
+        "Ai",
+        "Bi",
+        "Ci",
+        "Zi",
         "residual_variance"
     ]
 
     for col in decimal_columns:
         if col in df.columns:
-            df[col] = df[col].apply(lambda x: format_decimal(x))
+            df[col] = df[col].apply(format_decimal)
 
     return df
 
 
 def format_comparison_table(comparison_df):
     """
-    Format tabel perbandingan model.
+    Format tabel comparison sesuai output Colab:
+    Annualized_Return, Annualized_Volatility, Sharpe_Ratio,
+    Portfolio_Beta, Portfolio_Alpha, Selected_Stock_Count.
     """
 
     df = comparison_df.copy()
 
-    if "Annual Return" in df.columns:
-        df["Annual Return"] = df["Annual Return"].apply(lambda x: format_percent(x))
+    percent_columns = [
+        "Annualized_Return",
+        "Annualized_Volatility",
+        "Portfolio_Alpha"
+    ]
 
-    if "Annual Risk" in df.columns:
-        df["Annual Risk"] = df["Annual Risk"].apply(lambda x: format_percent(x))
+    for col in percent_columns:
+        if col in df.columns:
+            df[col] = df[col].apply(format_percent)
 
-    if "Sharpe Ratio" in df.columns:
-        df["Sharpe Ratio"] = df["Sharpe Ratio"].apply(lambda x: format_decimal(x))
+    decimal_columns = [
+        "Sharpe_Ratio",
+        "Portfolio_Beta"
+    ]
+
+    for col in decimal_columns:
+        if col in df.columns:
+            df[col] = df[col].apply(format_decimal)
 
     return df
 
 
 def format_stock_summary_table(stock_summary):
-    """
-    Format tabel stock summary untuk EDA.
-    """
-
     df = stock_summary.copy()
 
     percent_columns = [
         "mean_daily_log_return",
         "std_daily_log_return",
         "var_daily_log_return",
+        "mean_log_return",
+        "std_log_return",
+        "var_log_return",
         "sum_log_return",
         "annualized_return",
-        "annualized_volatility"
+        "annualized_volatility",
+        "expected_return_capm"
     ]
 
     for col in percent_columns:
         if col in df.columns:
-            df[col] = df[col].apply(lambda x: format_percent(x))
+            df[col] = df[col].apply(format_percent)
 
-    if "sharpe_ratio" in df.columns:
-        df["sharpe_ratio"] = df["sharpe_ratio"].apply(lambda x: format_decimal(x))
+    decimal_columns = [
+        "sharpe_ratio",
+        "beta",
+        "alpha"
+    ]
+
+    for col in decimal_columns:
+        if col in df.columns:
+            df[col] = df[col].apply(format_decimal)
 
     return df
 
 
 # =========================================================
-# CLEANING DISPLAY DATAFRAME
+# SELECT DISPLAY COLUMNS
 # =========================================================
 
 def select_portfolio_display_columns(weights_df):
-    """
-    Memilih kolom penting untuk tabel rekomendasi portfolio.
-    """
-
     selected_columns = [
         "Ticker",
         "Weight",
         "Allocation",
+
+        # MVEP / stock summary
         "annualized_return",
         "annualized_volatility",
+        "sharpe_ratio",
+
+        # SIM
+        "expected_return",
         "beta",
-        "sharpe_ratio"
+        "alpha",
+        "residual_variance",
+        "ERB",
+        "Ai",
+        "Bi",
+        "Ci",
+        "Zi",
+
+        # CAPM
+        "Beta",
+        "Expected_Return_CAPM",
+        "Excess_Return"
     ]
 
     existing_columns = [
@@ -164,10 +189,6 @@ def select_portfolio_display_columns(weights_df):
 
 
 def select_eda_display_columns(eda_stock_summary):
-    """
-    Memilih kolom penting untuk tabel EDA.
-    """
-
     selected_columns = [
         "Ticker",
         "annualized_return",
@@ -188,36 +209,27 @@ def select_eda_display_columns(eda_stock_summary):
 # =========================================================
 
 def create_metric_value(value, value_type="percent"):
-    """
-    Membuat value siap tampil untuk st.metric.
-    """
-
     if value_type == "percent":
         return format_percent(value)
 
-    elif value_type == "rupiah":
+    if value_type == "rupiah":
         return format_rupiah(value)
 
-    elif value_type == "decimal":
+    if value_type == "decimal":
         return format_decimal(value)
 
-    elif value_type == "number":
+    if value_type == "number":
         return format_number(value)
 
-    else:
-        return str(value)
+    return str(value)
 
 
 def get_best_model_by_sharpe(comparison_df):
-    """
-    Mengambil model terbaik berdasarkan Sharpe Ratio.
-    """
-
     if comparison_df.empty:
         return None
 
     best_row = comparison_df.sort_values(
-        by="Sharpe Ratio",
+        by="Sharpe_Ratio",
         ascending=False
     ).iloc[0]
 
@@ -225,15 +237,11 @@ def get_best_model_by_sharpe(comparison_df):
 
 
 def get_lowest_risk_model(comparison_df):
-    """
-    Mengambil model dengan risiko terendah.
-    """
-
     if comparison_df.empty:
         return None
 
     best_row = comparison_df.sort_values(
-        by="Annual Risk",
+        by="Annualized_Volatility",
         ascending=True
     ).iloc[0]
 
@@ -241,15 +249,11 @@ def get_lowest_risk_model(comparison_df):
 
 
 def get_highest_return_model(comparison_df):
-    """
-    Mengambil model dengan return tertinggi.
-    """
-
     if comparison_df.empty:
         return None
 
     best_row = comparison_df.sort_values(
-        by="Annual Return",
+        by="Annualized_Return",
         ascending=False
     ).iloc[0]
 
@@ -261,10 +265,6 @@ def get_highest_return_model(comparison_df):
 # =========================================================
 
 def validate_investment_amount(investment_amount, minimum_amount=100_000):
-    """
-    Validasi modal investasi.
-    """
-
     if investment_amount < minimum_amount:
         raise ValueError(
             f"Modal investasi minimal {format_rupiah(minimum_amount)}."
@@ -274,10 +274,6 @@ def validate_investment_amount(investment_amount, minimum_amount=100_000):
 
 
 def clean_positive_weights(weights_df):
-    """
-    Mengambil saham dengan bobot positif saja.
-    """
-
     if "Weight" not in weights_df.columns:
         return weights_df
 
@@ -285,10 +281,6 @@ def clean_positive_weights(weights_df):
 
 
 def normalize_weights(weights_df):
-    """
-    Normalisasi bobot agar total = 1.
-    """
-
     df = weights_df.copy()
 
     if "Weight" not in df.columns:
@@ -315,10 +307,6 @@ def generate_simple_advisor(
     sharpe_ratio,
     valid_ticker_count
 ):
-    """
-    Membuat interpretasi sederhana untuk dashboard.
-    """
-
     if sharpe_ratio >= 1:
         sharpe_text = "cukup baik karena nilai Sharpe Ratio berada di atas 1"
     elif sharpe_ratio >= 0:
@@ -338,7 +326,7 @@ def generate_simple_advisor(
         f"estimasi return tahunan sebesar {format_percent(portfolio_return)} "
         f"dengan risiko tahunan sebesar {format_percent(portfolio_risk)}. "
         f"Secara umum, {risk_text}, dan performanya {sharpe_text}. "
-        f"Analisis dilakukan terhadap {valid_ticker_count} saham valid setelah proses dynamic filtering. "
+        f"Analisis dilakukan terhadap {valid_ticker_count} saham valid. "
         f"Hasil ini bersifat decision support dan bukan merupakan saran finansial mutlak."
     )
 
