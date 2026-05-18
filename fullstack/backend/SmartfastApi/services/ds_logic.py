@@ -34,6 +34,57 @@ except Exception:
 
     GENAI_AVAILABLE = False
 
+# ==============================================================================
+# TICKER METADATA MAPPING (LQ45 & IDX30 Stocks)
+# ==============================================================================
+TICKER_DETAILS = {
+    "AADI.JK": {"fullname": "PT Adaro Andalan Indonesia Tbk", "sector": "Energy"},
+    "ADMR.JK": {"fullname": "PT Adaro Minerals Indonesia Tbk", "sector": "Basic Materials"},
+    "ADRO.JK": {"fullname": "PT Adaro Energy Indonesia Tbk", "sector": "Energy"},
+    "AKRA.JK": {"fullname": "PT AKR Corporindo Tbk", "sector": "Energy"},
+    "AMMN.JK": {"fullname": "PT Amman Mineral Internasional Tbk", "sector": "Basic Materials"},
+    "AMRT.JK": {"fullname": "PT Sumber Alfaria Trijaya Tbk", "sector": "Consumer Cyclical"},
+    "ANTM.JK": {"fullname": "PT Aneka Tambang Tbk", "sector": "Basic Materials"},
+    "ARTO.JK": {"fullname": "PT Bank Jago Tbk", "sector": "Financial Services"},
+    "ASII.JK": {"fullname": "PT Astra International Tbk", "sector": "Industrials"},
+    "BBCA.JK": {"fullname": "PT Bank Central Asia Tbk", "sector": "Financial Services"},
+    "BBNI.JK": {"fullname": "PT Bank Negara Indonesia (Persero) Tbk", "sector": "Financial Services"},
+    "BBRI.JK": {"fullname": "PT Bank Rakyat Indonesia (Persero) Tbk", "sector": "Financial Services"},
+    "BBTN.JK": {"fullname": "PT Bank Tabungan Negara (Persero) Tbk", "sector": "Financial Services"},
+    "BMRI.JK": {"fullname": "PT Bank Mandiri (Persero) Tbk", "sector": "Financial Services"},
+    "BRIS.JK": {"fullname": "PT Bank Syariah Indonesia Tbk", "sector": "Financial Services"},
+    "BRPT.JK": {"fullname": "PT Barito Pacific Tbk", "sector": "Basic Materials"},
+    "CPIN.JK": {"fullname": "PT Charoen Pokphand Indonesia Tbk", "sector": "Consumer Defensive"},
+    "CTRA.JK": {"fullname": "PT Ciputra Development Tbk", "sector": "Real Estate"},
+    "ESSA.JK": {"fullname": "PT Essa Industri Indonesia Tbk", "sector": "Basic Materials"},
+    "EXCL.JK": {"fullname": "PT XL Axiata Tbk", "sector": "Communication Services"},
+    "GOTO.JK": {"fullname": "PT GoTo Gojek Tokopedia Tbk", "sector": "Technology"},
+    "ICBP.JK": {"fullname": "PT Indofood CBP Sukses Makmur Tbk", "sector": "Consumer Defensive"},
+    "INCO.JK": {"fullname": "PT Vale Indonesia Tbk", "sector": "Basic Materials"},
+    "INDF.JK": {"fullname": "PT Indofood Sukses Makmur Tbk", "sector": "Consumer Defensive"},
+    "INKP.JK": {"fullname": "PT Indah Kiat Pulp & Paper Tbk", "sector": "Basic Materials"},
+    "ISAT.JK": {"fullname": "PT Indosat Ooredoo Hutchison Tbk", "sector": "Communication Services"},
+    "ITMG.JK": {"fullname": "PT Indo Tambangraya Megah Tbk", "sector": "Energy"},
+    "JPFA.JK": {"fullname": "PT Japfa Comfeed Indonesia Tbk", "sector": "Consumer Defensive"},
+    "JSMR.JK": {"fullname": "PT Jasa Marga (Persero) Tbk", "sector": "Industrials"},
+    "KLBF.JK": {"fullname": "PT Kalbe Farma Tbk", "sector": "Healthcare"},
+    "MAPA.JK": {"fullname": "PT Map Aktif Adiperkasa Tbk", "sector": "Consumer Cyclical"},
+    "MAPI.JK": {"fullname": "PT Mitra Adiperkasa Tbk", "sector": "Consumer Cyclical"},
+    "MBMA.JK": {"fullname": "PT Merdeka Battery Materials Tbk", "sector": "Basic Materials"},
+    "MDKA.JK": {"fullname": "PT Merdeka Copper Gold Tbk", "sector": "Basic Materials"},
+    "MEDC.JK": {"fullname": "PT Medco Energi Internasional Tbk", "sector": "Energy"},
+    "PGAS.JK": {"fullname": "PT Perusahaan Gas Negara Tbk", "sector": "Utilities"},
+    "PGEO.JK": {"fullname": "PT Pertamina Geothermal Energy Tbk", "sector": "Utilities"},
+    "PTBA.JK": {"fullname": "PT Bukit Asam Tbk", "sector": "Energy"},
+    "SIDO.JK": {"fullname": "PT Industri Jamu dan Farmasi Sido Muncul Tbk", "sector": "Consumer Defensive"},
+    "SMGR.JK": {"fullname": "PT Semen Indonesia (Persero) Tbk", "sector": "Basic Materials"},
+    "TLKM.JK": {"fullname": "PT Telkom Indonesia (Persero) Tbk", "sector": "Communication Services"},
+    "TOWR.JK": {"fullname": "PT Sarana Menara Nusantara Tbk", "sector": "Communication Services"},
+    "UNTR.JK": {"fullname": "PT United Tractors Tbk", "sector": "Industrials"},
+    "UNVR.JK": {"fullname": "PT Unilever Indonesia Tbk", "sector": "Consumer Defensive"},
+    "WIFI.JK": {"fullname": "PT Solusi Sinergi Digital Tbk", "sector": "Technology"}
+}
+
 def clean_nan(obj):
     """
     Recursively replace NaN
@@ -319,7 +370,7 @@ def analyze_portfolio_logic(
         comparison = None
 
     # ==========================
-    # FILTER POSITIVE WEIGHT
+    # FILTER NON-ZERO WEIGHTS (ALLOW SHORT SELLING)
     # ==========================
 
     weights_df = result[
@@ -330,52 +381,9 @@ def analyze_portfolio_logic(
         weights_df[
             weights_df[
                 "Weight"
-            ] > 0
+            ].abs() > 0.0001
         ]
     )
-
-    # ==========================
-    # CAPM TOP 10
-    # ==========================
-
-    if result[
-        "method"
-    ] == "CAPM":
-
-        weights_df = (
-            weights_df
-            .sort_values(
-                by="Weight",
-                ascending=False
-            )
-            .head(10)
-        )
-
-        total_weight = (
-            weights_df[
-                "Weight"
-            ].sum()
-        )
-
-        weights_df[
-            "Weight"
-        ] = (
-            weights_df[
-                "Weight"
-            ]
-            /
-            total_weight
-        )
-
-        weights_df[
-            "Allocation"
-        ] = (
-            weights_df[
-                "Weight"
-            ]
-            *
-            investment_amount
-        )
 
     # ==========================
     # BUILD PORTFOLIO
@@ -386,21 +394,44 @@ def analyze_portfolio_logic(
     for _, row in (
         weights_df.iterrows()
     ):
+        ticker = row["Ticker"]
 
         stock_prediction = (
-            predict_stock_trend(
-                row[
-                    "Ticker"
-                ]
-            )
+            predict_stock_trend(ticker)
         )
+
+        # Get current price
+        try:
+            current_price = float(filtered_result["filtered_price"][ticker].dropna().iloc[-1])
+        except Exception:
+            current_price = 0.0
+
+        # Calculate lot allocation (1 lot = 100 shares)
+        if current_price > 0:
+            shares = row["Allocation"] / current_price
+            lot = round(shares / 100, 2)
+            integer_lot = int(shares / 100)
+        else:
+            shares = 0.0
+            lot = 0.0
+            integer_lot = 0
+
+        # Fetch metadata
+        meta = TICKER_DETAILS.get(ticker, {"fullname": f"PT {ticker.split('.')[0]} Tbk", "sector": "Lainnya"})
 
         item = {
 
             "ticker":
-                row[
-                    "Ticker"
-                ],
+                ticker,
+
+            "fullname":
+                meta["fullname"],
+
+            "sector":
+                meta["sector"],
+
+            "current_price":
+                round(current_price, 2) if current_price > 0 else None,
 
             "weight":
                 round(
@@ -421,6 +452,15 @@ def analyze_portfolio_logic(
                     ),
                     2
                 ),
+
+            "shares":
+                round(shares, 2) if current_price > 0 else None,
+
+            "lot":
+                lot if current_price > 0 else None,
+
+            "integer_lot":
+                integer_lot if current_price > 0 else None,
 
             "trend":
                 stock_prediction[
@@ -669,126 +709,43 @@ def analyze_portfolio_logic(
 
 
     # ==========================
-    # METHOD REASON
+    # GENAI PORTFOLIO SUMMARY
     # ==========================
-
-    ihsg_result = (
-        predict_ihsg()
-    )
-
-    trend = (
-        ihsg_result[
-            "market_trend"
-        ]
-    )
-
-    confidence = (
-        ihsg_result[
-            "confidence"
-        ]
-    )
+    ihsg_result = predict_ihsg(end_date=end_date)
+    trend = ihsg_result["market_trend"]
+    confidence = ihsg_result["confidence"]
 
     if trend == "Bullish":
-
-        reason = (
-            f"IHSG diprediksi "
-            f"NAIK → fokus "
-            f"return maksimal "
-            f"(Sharpe ratio "
-            f"tertinggi: "
-            f"{sharpe_ratio})"
-        )
-
+        reason = f"IHSG diprediksi NAIK → fokus return maksimal (Sharpe ratio tertinggi: {sharpe_ratio})"
     elif trend == "Bearish":
-
-        reason = (
-            f"IHSG diprediksi "
-            f"TURUN → fokus "
-            f"risiko rendah "
-            f"(Risk: "
-            f"{annual_risk}%)"
-        )
-
+        reason = f"IHSG diprediksi TURUN → fokus risiko rendah (Risk: {annual_risk}%)"
     else:
+        reason = "IHSG sideways → menggunakan keseimbangan Sharpe Ratio dan Risk"
 
-        reason = (
-            "IHSG sideways → "
-            "menggunakan "
-            "keseimbangan "
-            "Sharpe Ratio "
-            "dan Risk"
+    if GENAI_AVAILABLE:
+        portfolio_summary = generate_portfolio_summary(
+            best_method=result["method"],
+            annual_return=annual_return,
+            annual_risk=annual_risk,
+            sharpe_ratio=sharpe_ratio,
+            alpha=alpha_avg,
+            beta=beta_avg,
+            portfolio=portfolio,
+            market_trend=trend,
+            confidence=confidence,
+            investment_amount=investment_amount,
+            reason=reason
         )
-
-
-    # ==========================
-    # PORTFOLIO SUMMARY
-    # ==========================
-
-    portfolio_summary = (
-        generate_portfolio_summary(
-
-            best_method=
-                result[
-                    "method"
-                ],
-
-            annual_return=
-                annual_return,
-
-            annual_risk=
-                annual_risk,
-
-            sharpe_ratio=
-                sharpe_ratio,
-
-            alpha=
-                alpha_avg,
-
-            beta=
-                beta_avg,
-
-            portfolio=
-                portfolio,
-
-            market_trend=
-                trend,
-
-            confidence=
-                confidence,
-
-            investment_amount=
-                investment_amount,
-
-            reason=
-                reason
-        )
-    )
+    else:
+        portfolio_summary = f"Portofolio dioptimalkan menggunakan metode {result['method']} dengan Expected Return {annual_return}% dan Risiko {annual_risk}%."
 
     # ==========================
     # RESPONSE
     # ==========================
 
     response = {
+        "portfolio": portfolio,
+        "portfolio_summary": portfolio_summary
+    }
 
-    "ihsg_prediction":
-        ihsg_result,
-
-    "best_method":
-        best_method,
-
-    "selected_method_result":
-        selected_method_result,
-
-    "comparison":
-        comparison,
-
-    "portfolio":
-        portfolio,
-
-    "portfolio_summary":
-        portfolio_summary
-}
-
-    return clean_nan(
-    response
-)
+    return clean_nan(response)

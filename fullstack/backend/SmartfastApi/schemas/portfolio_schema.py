@@ -8,4 +8,11 @@ class PortfolioRequest(BaseModel):
     end_date: str
     investment_amount: float
     model_choice: Optional[str] = "ALL"
+
+
+class IHSGRequest(BaseModel):
+    index_choice: str
+    start_date: str
+    end_date: str
+    investment_amount: float
     
