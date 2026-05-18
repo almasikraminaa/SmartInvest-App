@@ -160,7 +160,8 @@ scaler = joblib.load(
 # ==========================
 
 stock_data = pd.read_csv(
-    DATA_PATH
+    DATA_PATH,
+    engine="python"
 )
 
 stock_data["Date"] = pd.to_datetime(
