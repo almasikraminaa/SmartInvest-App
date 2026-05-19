@@ -1,58 +1,56 @@
 // src/pages/RegisterPage.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { registerUser } from '../services/authService';
 import bgImage from '../assets/images/bg.jpg';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [showSuccess, setShowSuccess] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
 
-    if (!fullName || !email || !password || !confirmPassword) {
-      setError('Semua kolom wajib diisi.');
+    if (!form.name || !form.email || !form.password || !form.confirmPassword) {
+      toast.error('Semua kolom wajib diisi.');
       return;
     }
-    if (password.length < 6) {
-      setError('Kata sandi minimal 6 karakter.');
+    if (form.password.length < 6) {
+      toast.error('Kata sandi minimal 6 karakter.');
       return;
     }
-    if (password !== confirmPassword) {
-      setError('Konfirmasi kata sandi tidak cocok.');
+    if (form.password !== form.confirmPassword) {
+      toast.error('Konfirmasi kata sandi tidak cocok.');
       return;
     }
 
     setIsLoading(true);
-    // Mock register — nanti ganti dengan API call ke Supabase Auth
-    setTimeout(() => {
+    try {
+      await registerUser(form.name, form.email, form.password);
+      toast.success('Registrasi berhasil!');
+      navigate('/login');
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
       setIsLoading(false);
-      setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        navigate('/login');
-      }, 2000);
-    }, 1000);
+    }
   };
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-slate-950 p-4">
 
-      {/* Full-Screen Background Image Layer */}
+      {/* Background */}
       <div className="absolute inset-0 z-0">
         <img src={bgImage} alt="Register Background" className="w-full h-full object-cover opacity-80" />
       </div>
 
-      {/* Main Register Card */}
+      {/* Card */}
       <div className="relative z-10 max-w-md w-full bg-white p-8 rounded-xl shadow-xl">
 
         {/* Header */}
@@ -68,6 +66,7 @@ export default function RegisterPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
+
           {/* Nama Lengkap */}
           <div>
             <label className="text-xs font-semibold text-slate-700 block mb-1.5">Nama Lengkap</label>
@@ -77,8 +76,9 @@ export default function RegisterPage() {
               </div>
               <input
                 type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                name="name"
+                value={form.name}
+                onChange={handleChange}
                 placeholder="Masukkan nama lengkap Anda"
                 className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-2.5 text-sm text-gray-700 outline-none focus:border-blue-500 transition-colors"
               />
@@ -94,8 +94,9 @@ export default function RegisterPage() {
               </div>
               <input
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                name="email"
+                value={form.email}
+                onChange={handleChange}
                 placeholder="contoh@email.com"
                 className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-2.5 text-sm text-gray-700 outline-none focus:border-blue-500 transition-colors"
               />
@@ -111,8 +112,9 @@ export default function RegisterPage() {
               </div>
               <input
                 type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                name="password"
+                value={form.password}
+                onChange={handleChange}
                 placeholder="Minimal 6 karakter"
                 className="w-full border border-gray-200 rounded-lg pl-10 pr-10 py-2.5 text-sm text-gray-700 outline-none focus:border-blue-500 transition-colors"
               />
@@ -135,8 +137,9 @@ export default function RegisterPage() {
               </div>
               <input
                 type={showConfirm ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                name="confirmPassword"
+                value={form.confirmPassword}
+                onChange={handleChange}
                 placeholder="Ketik ulang kata sandi"
                 className="w-full border border-gray-200 rounded-lg pl-10 pr-10 py-2.5 text-sm text-gray-700 outline-none focus:border-blue-500 transition-colors"
               />
@@ -149,12 +152,6 @@ export default function RegisterPage() {
               </button>
             </div>
           </div>
-
-          {/* Error */}
-          {error && <p className="text-xs text-red-500 font-medium bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
-
-          {/* Success toast */}
-          {showSuccess && <p className="text-xs text-green-600 font-medium bg-green-50 px-3 py-2 rounded-lg flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Registrasi berhasil disimulasikan!</p>}
 
           {/* Submit */}
           <button
@@ -184,7 +181,7 @@ export default function RegisterPage() {
           Daftar dengan Google
         </button>
 
-        {/* Footer link */}
+        {/* Footer */}
         <p className="text-xs text-slate-500 text-center mt-6">
           Sudah punya akun?{' '}
           <button type="button" onClick={() => navigate('/login')} className="text-blue-600 hover:underline font-medium">Masuk di sini</button>
