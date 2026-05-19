@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-// Import kedua service sekaligus
 import { analyzePortfolio } from '../../../services/portfolioService';
 import { predictIHSG } from '../../../services/ihsgService';
 import { supabase } from '../../../lib/supabase';
 
 const METHODS = [
-  { value: '', label: 'Pilih model...' },
+  { value: '', label: 'Pilih model analisis...' },
   { value: 'MVEP', label: 'MVEP (Minimum Variance)' },
   { value: 'SIM', label: 'SIM (Single Index Model)' },
   { value: 'CAPM', label: 'CAPM (Capital Asset Pricing)' },
@@ -14,30 +13,48 @@ const METHODS = [
 ];
 
 const TARGET_INDICES = [
-  { value: '', label: 'Pilih indeks...' },
+  { value: '', label: 'Pilih indeks target...' },
   { value: 'LQ45', label: 'LQ45' },
   { value: 'IDX30', label: 'IDX30' },
 ];
 
 export default function AnalysisModal({ isOpen, onClose, onAnalysisComplete, preSelectedMethod = '' }) {
+  // ⚡ SEKARANG DEFAULT STATE KOSONG MURNI (TANPA DEFAULT VALUE) ⚡
   const [formData, setFormData] = useState({
-    model_choice: 'MVEP',
-    index_choice: 'LQ45',
-    start_date: '2023-01-01',
-    end_date: '2024-01-01',
-    investment_amount: 10000000,
+    model_choice: '',
+    index_choice: '',
+    start_date: '',
+    end_date: '',
+    investment_amount: '',
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen && preSelectedMethod) {
-      setFormData((prev) => ({ ...prev, model_choice: preSelectedMethod }));
+    if (isOpen) {
+      if (preSelectedMethod) {
+        setFormData({
+          model_choice: preSelectedMethod,
+          index_choice: '',
+          start_date: '',
+          end_date: '',
+          investment_amount: '',
+        });
+      } else {
+        setFormData({
+          model_choice: '',
+          index_choice: '',
+          start_date: '',
+          end_date: '',
+          investment_amount: '',
+        });
+      }
+      setErrors({});
     }
   }, [isOpen, preSelectedMethod]);
 
   const handleChange = (field) => (e) => {
-    const value = field === 'investment_amount' ? Number(e.target.value) : e.target.value;
+    const value = field === 'investment_amount' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value;
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -60,6 +77,8 @@ export default function AnalysisModal({ isOpen, onClose, onAnalysisComplete, pre
     const localErrors = validateForm();
     if (Object.keys(localErrors).length > 0) {
       setErrors(localErrors);
+      // Tampilkan toast error pertama agar user tahu apa yang kurang
+      toast.error(Object.values(localErrors)[0]);
       return;
     }
 
@@ -67,29 +86,40 @@ export default function AnalysisModal({ isOpen, onClose, onAnalysisComplete, pre
     setIsLoading(true);
 
     try {
-      // ⚡ FIX: TEMBAK 2 ENDPOINT SEKALIGUS SECARA PARALEL ⚡
       const [portfolioRes, ihsgRes] = await Promise.all([
         analyzePortfolio(formData),
         predictIHSG(formData)
       ]);
 
-      // Satukan hasilnya ke dalam satu objek gabungan untuk dilempar ke AnalysisPage
       const combinedResponse = {
-        portfolio_data: portfolioRes, // Mengandung expectedReturn, risk, sharpeRatio, portfolio, dll dari endpoint lama
-        ihsg_data: ihsgRes            // Mengandung ihsg_analysis, decision_engine, ai_interpretation dari endpoint baru
+        portfolio_data: portfolioRes, 
+        ihsg_data: ihsgRes            
       };
+
+      const selectedMetrics = ihsgRes?.method_comparison?.find(m => m.method === formData.model_choice);
+      const finalReturn = selectedMetrics ? selectedMetrics.return : ihsgRes?.best_method_metrics?.expected_return || portfolioRes?.expectedReturn || 0;
+      const finalRisk = selectedMetrics ? selectedMetrics.risk : ihsgRes?.best_method_metrics?.annual_risk || portfolioRes?.risk || 0;
+      const finalSharpe = selectedMetrics ? selectedMetrics.sharpe : ihsgRes?.best_method_metrics?.sharpe_ratio || portfolioRes?.sharpeRatio || 0;
 
       try {
         const { data: userData } = await supabase.auth.getUser();
-        await supabase.from("analysis_history").insert({
-          user_id: userData?.user?.id,
-          index_choice: formData.index_choice,
-          model_choice: formData.model_choice,
-          investment_amount: formData.investment_amount,
-          result: combinedResponse, // Simpan objek gabungan ke history database
-        });
+        
+        await supabase
+          .from("investment_histories")
+          .insert({
+            user_id: userData?.user?.id,
+            target_index: formData.index_choice,
+            method: formData.model_choice,
+            capital: Number(formData.investment_amount),
+            expected_return: Number(finalReturn),
+            risk: Number(finalRisk),
+            bi_rate: Number(ihsgRes?.metadata?.bi_rate || 5.8),
+            sharpe_ratio: Number(finalSharpe),
+            market_sentiment: ihsgRes?.ihsg_analysis?.market_trend || "N/A"
+          });
+
       } catch (dbError) {
-        console.error("Gagal menyimpan ke history:", dbError);
+        console.error("Gagal menyimpan ke investment_histories Supabase:", dbError);
       }
 
       toast.success("Analisis Ganda Berhasil Terintegrasi!");
@@ -97,7 +127,7 @@ export default function AnalysisModal({ isOpen, onClose, onAnalysisComplete, pre
       onClose();
     } catch (error) {
       console.error(error);
-      toast.error("Gagal melakukan penembakan data analisis ganda.");
+      toast.error("Gagal melakukan proses analisis data.");
     } finally {
       setIsLoading(false);
     }
@@ -110,28 +140,28 @@ export default function AnalysisModal({ isOpen, onClose, onAnalysisComplete, pre
       <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl border border-gray-100 flex flex-col gap-6 max-h-[88vh] overflow-y-auto relative">
         <div>
           <h2 className="text-2xl font-bold text-smart-navy mb-1">Konfigurasi Ganda AI</h2>
-          <p className="text-gray-400 text-sm font-medium">Data Portofolio Kuantitatif + Prediksi IHSG</p>
+          <p className="text-gray-400 text-sm font-medium">Masukkan parameter analisis baru Anda</p>
         </div>
 
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
           {/* Model */}
-          <div className="bg-gray-50 p-4 rounded-xl border border-gray-50 flex flex-col gap-1">
+          <div className={`bg-gray-50 p-4 rounded-xl border flex flex-col gap-1 ${errors.model_choice ? 'border-red-300' : 'border-gray-50'}`}>
             <label className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Model Analisis</label>
             <select value={formData.model_choice} onChange={handleChange('model_choice')} disabled={isLoading} className="bg-transparent text-sm font-bold text-smart-navy outline-none cursor-pointer">
-              {METHODS.map((m) => <option key={m.value} value={m.value} disabled={m.value === ''}>{m.label}</option>)}
+              {METHODS.map((m) => <option key={m.value} value={m.value} disabled={m.value === '' && formData.model_choice !== ''}>{m.label}</option>)}
             </select>
           </div>
 
           {/* Target Index */}
-          <div className="bg-gray-50 p-4 rounded-xl border border-gray-50 flex flex-col gap-1">
+          <div className={`bg-gray-50 p-4 rounded-xl border flex flex-col gap-1 ${errors.index_choice ? 'border-red-300' : 'border-gray-50'}`}>
             <label className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Indeks Target</label>
             <select value={formData.index_choice} onChange={handleChange('index_choice')} disabled={isLoading} className="bg-transparent text-sm font-bold text-smart-navy outline-none cursor-pointer">
-              {TARGET_INDICES.map((idx) => <option key={idx.value} value={idx.value} disabled={idx.value === ''}>{idx.label}</option>)}
+              {TARGET_INDICES.map((idx) => <option key={idx.value} value={idx.value} disabled={idx.value === '' && formData.index_choice !== ''}>{idx.label}</option>)}
             </select>
           </div>
 
           {/* Period */}
-          <div className="bg-gray-50 p-4 rounded-xl border border-gray-50 flex flex-col gap-1">
+          <div className={`bg-gray-50 p-4 rounded-xl border flex flex-col gap-1 ${(errors.start_date || errors.end_date) ? 'border-red-300' : 'border-gray-50'}`}>
             <label className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Periode Historis</label>
             <div className="flex gap-4 mt-1">
               <div className="flex-1 flex flex-col">
@@ -146,18 +176,27 @@ export default function AnalysisModal({ isOpen, onClose, onAnalysisComplete, pre
           </div>
 
           {/* Investment Amount */}
-          <div className="bg-gray-50 p-4 rounded-xl border border-gray-50 flex flex-col gap-1">
+          <div className={`bg-gray-50 p-4 rounded-xl border flex flex-col gap-1 ${errors.investment_amount ? 'border-red-300' : 'border-gray-50'}`}>
             <label className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Jumlah Investasi</label>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-sm font-bold text-gray-400">Rp</span>
-              <input type="number" min="100000" value={formData.investment_amount} onChange={handleChange('investment_amount')} disabled={isLoading} className="bg-transparent text-sm font-bold text-smart-navy outline-none w-full" />
+              {/* ⚡ TAMBAH PLACEHOLDER SAMAR-SAMAR BIAR USER TINGGAL KETIK LANGSUNG ⚡ */}
+              <input 
+                type="number" 
+                min="100000" 
+                placeholder="Contoh: 10000000" 
+                value={formData.investment_amount} 
+                onChange={handleChange('investment_amount')} 
+                disabled={isLoading} 
+                className="bg-transparent text-sm font-bold text-smart-navy outline-none w-full placeholder-gray-300" 
+              />
             </div>
           </div>
 
           <div className="flex gap-3 mt-4">
             <button type="button" onClick={onClose} disabled={isLoading} className="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all">Batal</button>
             <button type="submit" disabled={isLoading} className="flex-[2] bg-smart-green text-white py-3 rounded-xl font-bold text-sm hover:bg-[#00b86a] transition-all flex items-center justify-center gap-2 shadow-sm">
-              {isLoading ? 'Memproses Dual API...' : 'Mulai Analisis'}
+              {isLoading ? 'Memproses Perhitungan...' : 'Mulai Analisis'}
             </button>
           </div>
         </form>
