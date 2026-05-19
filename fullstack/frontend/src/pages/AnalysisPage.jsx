@@ -34,6 +34,13 @@ export default function AnalysisPage({ analysisCompleted, result, metaForm, setI
   const fmtNum = (val) => (val != null ? Number(val).toFixed(2) : "N/A");
   const fmtRupiah = (val) => val != null ? "Rp " + Number(val).toLocaleString("id-ID") : "Rp 0";
 
+  // ── HITUNG TOTAL SECARA DINAMIS UNTUK BAGIAN FOOTER TABEL ──
+  const totalWeight = pData?.portfolio?.reduce((sum, stock) => sum + (stock.weight || 0), 0) || 0;
+  const totalAllocation = pData?.portfolio?.reduce((sum, stock) => sum + (stock.allocation || 0), 0) || 0;
+  
+  const initialAmount = iData?.investment_simulation?.initial_amount || metaForm?.investment_amount || 0;
+  const sisaDanaTunai = initialAmount - totalAllocation;
+
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 min-h-[85vh]">
       <main className="w-full mx-auto flex flex-col gap-6">
@@ -44,7 +51,7 @@ export default function AnalysisPage({ analysisCompleted, result, metaForm, setI
             <h1 className="text-2xl font-bold text-smart-navy">Analisis Kuantitatif Portofolio & IHSG</h1>
             <p className="text-gray-400 text-sm mt-0.5">Sinkronisasi Alokasi Kuantitatif Terpilih dengan Prediksi Arah AI Makro bursa.</p>
           </div>
-          {analysisCompleted && (
+          {analysisCompleted && result && (
             <button
               onClick={() => setIsAnalysisModalOpen(true)}
               className="bg-white border border-gray-200 text-gray-600 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-gray-50 flex items-center gap-2 shadow-sm transition-all text-center shrink-0"
@@ -55,8 +62,8 @@ export default function AnalysisPage({ analysisCompleted, result, metaForm, setI
           )}
         </div>
 
-        {!analysisCompleted ? (
-          /* ── STATE MENUNGGU ── */
+        {!analysisCompleted || !result ? (
+          /* ── STATE MENUNGGU JIKA BELUM ADA DATA ANALISIS ── */
           <section className="flex flex-col items-center justify-center py-24 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 transition-all">
             <button onClick={() => setIsAnalysisModalOpen(true)} className="group w-24 h-24 bg-emerald-50 rounded-[2rem] flex items-center justify-center text-smart-green mb-6 shadow-inner hover:scale-105 hover:bg-emerald-100/70 transition-all border border-emerald-100">
               <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:rotate-12 transition-transform">
@@ -68,7 +75,7 @@ export default function AnalysisPage({ analysisCompleted, result, metaForm, setI
             <button onClick={() => setIsAnalysisModalOpen(true)} className="bg-smart-navy text-white font-bold px-6 py-3 rounded-xl text-sm transition-opacity hover:opacity-90 shadow-sm">Konfigurasi Parameter Perhitungan</button>
           </section>
         ) : (
-          /* ── LAYOUT DASHBOARD UTAMA GANDA ── */
+          /* ── LAYOUT DASHBOARD UTAMA GANDA DARI DATA RIIL ── */
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start animate-fade-in">
             
             {/* SEKTOR KIRI: PORTFOLIO & BREAKDOWN METRIK */}
@@ -90,7 +97,7 @@ export default function AnalysisPage({ analysisCompleted, result, metaForm, setI
                 </div>
                 <div className="bg-blue-50/40 border border-blue-100/50 rounded-xl p-3.5 text-center flex flex-col justify-center">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Simulasi Dana</p>
-                  <p className="text-xs font-bold text-blue-600 truncate">{fmtRupiah(iData?.investment_simulation?.initial_amount || metaForm?.investment_amount)}</p>
+                  <p className="text-xs font-bold text-blue-600 truncate">{fmtRupiah(initialAmount)}</p>
                 </div>
               </div>
 
@@ -101,7 +108,7 @@ export default function AnalysisPage({ analysisCompleted, result, metaForm, setI
                     <span>📊</span> Komposisi Alokasi Saham Pilihan ({metaForm?.model_choice})
                   </h3>
                   <span className="text-[11px] font-semibold px-2.5 py-1 bg-gray-50 text-gray-500 rounded-lg border border-gray-100 self-start sm:self-center">
-                    Model Perhitungan Aktif
+                    {metaForm?.model_choice === "CAPM" ? "📌 Top 10 Saham Terbesar" : "⚡ Seleksi Otomatis via Cut-Off Market"}
                   </span>
                 </div>
 
@@ -118,36 +125,55 @@ export default function AnalysisPage({ analysisCompleted, result, metaForm, setI
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50 text-gray-600 font-medium">
-                      {/* Tampilkan apa adanya tanpa ada penyaringan index / slice di frontend */}
-                      {pData?.portfolio?.map((stock, idx) => (
-                        <tr key={idx} className="hover:bg-gray-50/30 transition-colors">
-                          <td className="p-4">
-                            <span className="font-bold text-smart-navy block">{stock.ticker?.replace(".JK", "")}</span>
-                            <span className="text-[10px] text-gray-400 font-normal block max-w-[150px] truncate">{stock.fullname}</span>
-                          </td>
-                          <td className="p-4 text-gray-700">{fmtPersen(stock.weight)}</td>
-                          <td className="p-4 text-right text-smart-green">{fmtRupiah(stock.allocation)}</td>
-                          <td className="p-4 text-right font-bold text-gray-700">{stock.integer_lot || stock.lot?.toFixed(0)} Lot</td>
-                          <td className="p-4 text-center">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              stock.trend === "Bullish" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : 
-                              stock.trend === "Bearish" ? "bg-rose-50 text-rose-700 border border-rose-100" : "bg-amber-50 text-amber-700 border border-amber-100"
-                            }`}>
-                              {stock.trend || "Sideways"}
-                            </span>
-                          </td>
-                          <td className="p-4 text-center">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide ${
-                              stock.recommendation === "BUY" ? "bg-smart-green text-white" : 
-                              stock.recommendation === "HOLD" ? "bg-amber-500 text-white" : "bg-gray-100 text-gray-400"
-                            }`}>
-                              {stock.recommendation || "HOLD"}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {(() => {
+                        const isCAPM = metaForm?.model_choice === "CAPM";
+                        const stocksToRender = isCAPM
+                          ? pData?.portfolio?.slice(0, 10)
+                          : pData?.portfolio;
+
+                        return stocksToRender?.map((stock, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50/30 transition-colors">
+                            <td className="p-4">
+                              <span className="font-bold text-smart-navy block">{stock.ticker?.replace(".JK", "")}</span>
+                              <span className="text-[10px] text-gray-400 font-normal block max-w-[150px] truncate">{stock.fullname}</span>
+                            </td>
+                            <td className="p-4 text-gray-700">{fmtPersen(stock.weight)}</td>
+                            <td className="p-4 text-right text-smart-green">{fmtRupiah(stock.allocation)}</td>
+                            <td className="p-4 text-right font-bold text-gray-700">{stock.integer_lot || stock.lot?.toFixed(0)} Lot</td>
+                            <td className="p-4 text-center">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                stock.trend === "Bullish" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : 
+                                stock.trend === "Bearish" ? "bg-rose-50 text-rose-700 border border-rose-100" : "bg-amber-50 text-amber-700 border border-amber-100"
+                              }`}>
+                                {stock.trend || "Sideways"}
+                              </span>
+                            </td>
+                            <td className="p-4 text-center">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide ${
+                                stock.recommendation === "BUY" ? "bg-smart-green text-white" : 
+                                stock.recommendation === "HOLD" ? "bg-amber-500 text-white" : "bg-gray-100 text-gray-400"
+                              }`}>
+                                {stock.recommendation || "HOLD"}
+                              </span>
+                            </td>
+                          </tr>
+                        ));
+                      })()}
                     </tbody>
+                    <tfoot>
+                      <tr className="bg-gray-50/50 font-bold border-t border-gray-200 text-smart-navy">
+                        <td className="p-4 text-xs uppercase tracking-wider">Total Terhitung</td>
+                        <td className="p-4 text-gray-800">{fmtPersen(totalWeight)}</td>
+                        <td className="p-4 text-right text-smart-green">{fmtRupiah(totalAllocation)}</td>
+                        <td className="p-4" colSpan="3"></td>
+                      </tr>
+                    </tfoot>
                   </table>
+                </div>
+
+                <div className="mt-3 flex justify-between items-center text-xs font-semibold px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-gray-500">
+                  <span>Dana Tunai Tidak Terkonversi (Sisa Kembalian Lot)</span>
+                  <span className="text-smart-navy font-bold">{fmtRupiah(sisaDanaTunai)}</span>
                 </div>
               </div>
             </div>
