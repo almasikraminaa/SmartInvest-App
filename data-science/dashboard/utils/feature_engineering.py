@@ -9,10 +9,9 @@ import pandas as pd
 def calculate_log_return(price_data):
     """
     Menghitung log return saham.
-    Sama seperti Colab:
+    Sesuai Colab:
     log_return_matrix = np.log(filtered_price / filtered_price.shift(1)).dropna()
     """
-
     log_return_matrix = np.log(price_data / price_data.shift(1)).dropna()
 
     return log_return_matrix
@@ -21,7 +20,7 @@ def calculate_log_return(price_data):
 def calculate_market_log_return(market_price):
     """
     Menghitung log return market / IHSG.
-    Sama seperti Colab:
+    Sesuai Colab:
     market_log_return = np.log(filtered_market["IHSG"] / filtered_market["IHSG"].shift(1)).dropna()
     """
 
@@ -37,8 +36,6 @@ def calculate_market_log_return(market_price):
         market_series / market_series.shift(1)
     ).dropna()
 
-    market_log_return.name = "market_log_return"
-
     return market_log_return
 
 
@@ -49,7 +46,7 @@ def calculate_market_log_return(market_price):
 def align_stock_and_market_return(log_return_matrix, market_log_return):
     """
     Align return saham dan return market berdasarkan common index.
-    Sama seperti Colab:
+    Sesuai Colab:
     common_index = log_return_matrix.index.intersection(market_log_return.index)
     """
 
@@ -64,13 +61,14 @@ def align_stock_and_market_return(log_return_matrix, market_log_return):
 
 
 # =========================================================
-# ELIMINASI RETURN NEGATIF
+# FILTER SAHAM RETURN POSITIF
 # =========================================================
 
 def filter_positive_mean_return(log_return_matrix):
     """
     Mengeliminasi saham dengan mean log return negatif.
-    Ini wajib agar hasil dashboard sama dengan Colab.
+    Sesuai Colab:
+    positive_return_tickers = mean_log_return_initial[mean_log_return_initial >= 0]
     """
 
     mean_log_return_initial = log_return_matrix.mean()
@@ -100,7 +98,8 @@ def filter_positive_mean_return(log_return_matrix):
 def calculate_risk_free_rate(filtered_bi_rate, trading_days=252):
     """
     Mengambil rata-rata BI Rate sebagai risk-free rate tahunan.
-    Sama seperti Colab:
+    Sesuai Colab:
+    risk_free_rate_annual = filtered_bi_rate["BI_Rate"].mean()
     risk_free_rate_daily = (1 + risk_free_rate_annual) ** (1 / trading_days) - 1
     """
 
@@ -117,7 +116,6 @@ def calculate_risk_free_rate(filtered_bi_rate, trading_days=252):
     if rf_series.empty:
         raise ValueError("Data BI Rate kosong atau tidak valid.")
 
-    # Jika masih persen, misal 6.00, ubah menjadi 0.06
     if rf_series.mean() > 1:
         rf_series = rf_series / 100
 
@@ -137,7 +135,7 @@ def calculate_risk_free_rate(filtered_bi_rate, trading_days=252):
 def calculate_beta(log_return_matrix, market_log_return):
     """
     Menghitung beta saham terhadap IHSG.
-    Sama seperti Colab:
+    Sesuai Colab:
     beta_i = covariance(return_i, return_market) / variance(return_market)
     """
 
@@ -163,7 +161,7 @@ def calculate_beta(log_return_matrix, market_log_return):
 def calculate_alpha(mean_log_return, beta_series, market_mean_log_return):
     """
     Menghitung alpha saham.
-    Sama seperti Colab:
+    Sesuai Colab:
     alpha_i = mean_return_i - beta_i * mean_return_market
     """
 
@@ -193,8 +191,7 @@ def create_stock_summary(
     expected_return_capm
 ):
     """
-    Membuat stock summary final.
-    Nama kolom dibuat sama seperti Colab.
+    Membuat stock summary final dengan nama kolom sesuai Colab.
     """
 
     stock_summary = pd.DataFrame({
@@ -228,19 +225,16 @@ def feature_engineering(
     """
     Main function feature engineering sesuai alur Colab.
 
-    Output utama:
-    - log_return_matrix
-    - market_log_return
-    - covariance_matrix
-    - correlation_matrix
-    - beta_series
-    - alpha_series
-    - expected_return_capm
-    - stock_summary
-    - annual_risk_free_rate
-    - daily_risk_free_rate
-    - annual_market_return
-    - feature_engineering_summary
+    Alur:
+    1. Hitung log return saham
+    2. Hitung log return IHSG
+    3. Align return saham dan market
+    4. Eliminasi saham dengan mean log return negatif
+    5. Hitung statistik saham
+    6. Hitung statistik market
+    7. Hitung covariance dan correlation
+    8. Hitung risk-free rate dari BI Rate
+    9. Hitung beta, alpha, expected return CAPM, dan Sharpe Ratio
     """
 
     # =====================================================
@@ -267,7 +261,7 @@ def feature_engineering(
     initial_ticker_count = log_return_matrix.shape[1]
 
     # =====================================================
-    # 5.4 - 5.5 ELIMINASI SAHAM RETURN NEGATIF
+    # 5.4 - 5.5 ELIMINASI SAHAM MEAN LOG RETURN NEGATIF
     # =====================================================
 
     log_return_matrix, negative_return_tickers, positive_return_tickers = (
@@ -304,13 +298,8 @@ def feature_engineering(
     market_var_log_return = market_log_return.var()
     market_sum_log_return = market_log_return.sum()
 
-    market_annualized_return = (
-        market_mean_log_return * trading_days
-    )
-
-    market_annualized_volatility = (
-        market_std_log_return * np.sqrt(trading_days)
-    )
+    market_annualized_return = market_mean_log_return * trading_days
+    market_annualized_volatility = market_std_log_return * np.sqrt(trading_days)
 
     market_return_stats = pd.DataFrame({
         "mean_log_return": [market_mean_log_return],
@@ -334,7 +323,7 @@ def feature_engineering(
     correlation_matrix = log_return_matrix.corr()
 
     # =====================================================
-    # 5.10 RISK-FREE RATE
+    # 5.10 RISK-FREE RATE DARI BI RATE
     # =====================================================
 
     risk_free_rate_annual, risk_free_rate_daily = calculate_risk_free_rate(
@@ -424,23 +413,31 @@ def feature_engineering(
         "market_log_return": market_log_return,
         "covariance_matrix": covariance_matrix,
         "correlation_matrix": correlation_matrix,
+
         "stock_return_stats": stock_return_stats,
         "market_return_stats": market_return_stats,
+
         "mean_log_return": mean_log_return,
         "std_log_return": std_log_return,
         "var_log_return": var_log_return,
         "sum_log_return": sum_log_return,
+
         "annualized_return": annualized_return,
         "annualized_volatility": annualized_volatility,
+
         "beta_series": beta_series,
         "alpha_series": alpha_series,
         "expected_return_capm": expected_return_capm,
         "sharpe_ratio": sharpe_ratio,
+
         "stock_summary": stock_summary,
+
         "annual_risk_free_rate": risk_free_rate_annual,
         "daily_risk_free_rate": risk_free_rate_daily,
         "annual_market_return": market_annualized_return,
+
         "feature_engineering_summary": feature_engineering_summary,
+
         "negative_return_tickers": negative_return_tickers,
         "positive_return_tickers": positive_return_tickers
     }

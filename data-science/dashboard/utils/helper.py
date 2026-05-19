@@ -85,12 +85,6 @@ def format_portfolio_table(weights_df):
 
 
 def format_comparison_table(comparison_df):
-    """
-    Format tabel comparison sesuai output Colab:
-    Annualized_Return, Annualized_Volatility, Sharpe_Ratio,
-    Portfolio_Beta, Portfolio_Alpha, Selected_Stock_Count.
-    """
-
     df = comparison_df.copy()
 
     percent_columns = [
@@ -158,7 +152,7 @@ def select_portfolio_display_columns(weights_df):
         "Weight",
         "Allocation",
 
-        # MVEP / stock summary
+        # Stock summary / MVEP
         "annualized_return",
         "annualized_volatility",
         "sharpe_ratio",

@@ -260,6 +260,12 @@ def plot_rolling_volatility(rolling_volatility, selected_tickers, index_name):
 # =========================================================
 
 def _prepare_positive_weights(weights_df):
+    """
+    Untuk pie chart dan bubble size.
+    Plotly tidak bisa menerima size negatif.
+    Maka hanya bobot positif yang dipakai.
+    """
+
     plot_df = weights_df.copy()
 
     if "Weight" not in plot_df.columns:
@@ -356,6 +362,11 @@ def plot_portfolio_cumulative_return(
     investment_amount,
     method_name
 ):
+    """
+    Portfolio daily return berasal dari log return.
+    Maka cumulative return memakai exp(cumsum(log_return)).
+    """
+
     portfolio_cumulative_return = np.exp(
         portfolio_daily_return.cumsum()
     )
@@ -379,6 +390,51 @@ def plot_portfolio_cumulative_return(
         yaxis_title="Portfolio Value",
         template="plotly_white",
         height=500
+    )
+
+    return fig
+
+
+def plot_selected_portfolio_risk_return(weights_df, method_name):
+    required_columns = [
+        "Weight",
+        "annualized_volatility",
+        "annualized_return"
+    ]
+
+    for col in required_columns:
+        if col not in weights_df.columns:
+            return None
+
+    plot_df = _prepare_positive_weights(weights_df)
+
+    if plot_df.empty:
+        return None
+
+    fig = px.scatter(
+        plot_df,
+        x="annualized_volatility",
+        y="annualized_return",
+        size="Weight",
+        text="Ticker",
+        hover_data=[
+            "Ticker",
+            "Weight",
+            "Allocation",
+            "annualized_return",
+            "annualized_volatility",
+            "sharpe_ratio"
+        ],
+        title=f"Risk vs Return Saham dalam Portfolio - {method_name}"
+    )
+
+    fig.update_traces(textposition="top center")
+
+    fig.update_layout(
+        xaxis_title="Annualized Volatility",
+        yaxis_title="Annualized Return",
+        template="plotly_white",
+        height=600
     )
 
     return fig
@@ -474,15 +530,18 @@ def plot_model_return_risk_scatter(comparison_df):
 
 
 def plot_portfolio_beta_comparison(comparison_df):
-    beta_alpha_df = comparison_df.dropna(
+    if "Portfolio_Beta" not in comparison_df.columns:
+        return None
+
+    beta_df = comparison_df.dropna(
         subset=["Portfolio_Beta"]
     ).copy()
 
-    if beta_alpha_df.empty:
+    if beta_df.empty:
         return None
 
     fig = px.bar(
-        beta_alpha_df,
+        beta_df,
         x="Model",
         y="Portfolio_Beta",
         title="Perbandingan Portfolio Beta",
@@ -505,15 +564,18 @@ def plot_portfolio_beta_comparison(comparison_df):
 
 
 def plot_portfolio_alpha_comparison(comparison_df):
-    beta_alpha_df = comparison_df.dropna(
+    if "Portfolio_Alpha" not in comparison_df.columns:
+        return None
+
+    alpha_df = comparison_df.dropna(
         subset=["Portfolio_Alpha"]
     ).copy()
 
-    if beta_alpha_df.empty:
+    if alpha_df.empty:
         return None
 
     fig = px.bar(
-        beta_alpha_df,
+        alpha_df,
         x="Model",
         y="Portfolio_Alpha",
         title="Perbandingan Portfolio Alpha",
@@ -544,7 +606,10 @@ def plot_portfolio_weight_comparison(portfolio_weight_comparison, model_name):
 
     weight_col = column_map.get(model_name)
 
-    if weight_col is None or weight_col not in portfolio_weight_comparison.columns:
+    if weight_col is None:
+        return None
+
+    if weight_col not in portfolio_weight_comparison.columns:
         return None
 
     plot_df = portfolio_weight_comparison[
@@ -583,51 +648,6 @@ def plot_portfolio_weight_comparison(portfolio_weight_comparison, model_name):
         yaxis_title="Weight",
         template="plotly_white",
         height=500
-    )
-
-    return fig
-
-
-def plot_selected_portfolio_risk_return(weights_df, method_name):
-    required_columns = [
-        "Weight",
-        "annualized_volatility",
-        "annualized_return"
-    ]
-
-    for col in required_columns:
-        if col not in weights_df.columns:
-            return None
-
-    plot_df = _prepare_positive_weights(weights_df)
-
-    if plot_df.empty:
-        return None
-
-    fig = px.scatter(
-        plot_df,
-        x="annualized_volatility",
-        y="annualized_return",
-        size="Weight",
-        text="Ticker",
-        hover_data=[
-            "Ticker",
-            "Weight",
-            "Allocation",
-            "annualized_return",
-            "annualized_volatility",
-            "sharpe_ratio"
-        ],
-        title=f"Risk vs Return Saham dalam Portfolio - {method_name}"
-    )
-
-    fig.update_traces(textposition="top center")
-
-    fig.update_layout(
-        xaxis_title="Annualized Volatility",
-        yaxis_title="Annualized Return",
-        template="plotly_white",
-        height=600
     )
 
     return fig

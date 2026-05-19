@@ -3,25 +3,6 @@ import pandas as pd
 
 
 # =========================================================
-# HELPER
-# =========================================================
-
-def calculate_portfolio_metrics(
-    portfolio_daily_return,
-    risk_free_rate_annual,
-    trading_days=252
-):
-    annualized_return = portfolio_daily_return.mean() * trading_days
-    annualized_volatility = portfolio_daily_return.std() * np.sqrt(trading_days)
-
-    sharpe_ratio = (
-        annualized_return - risk_free_rate_annual
-    ) / annualized_volatility
-
-    return annualized_return, annualized_volatility, sharpe_ratio
-
-
-# =========================================================
 # 7. MVEP - MEAN VARIANCE EFFICIENT PORTFOLIO
 # =========================================================
 
@@ -37,7 +18,6 @@ def run_mvep(
     stock_summary = feature_result["stock_summary"]
     risk_free_rate_annual = feature_result["annual_risk_free_rate"]
 
-    # 7.1 Ambil 10 pasangan saham dengan korelasi terendah
     corr_matrix_mvep = correlation_matrix.copy()
     corr_matrix_mvep.index.name = None
     corr_matrix_mvep.columns.name = None
@@ -54,14 +34,18 @@ def run_mvep(
         axis=1
     )
 
-    corr_pairs_mvep = corr_pairs_mvep.drop_duplicates("pair").drop(columns="pair")
+    corr_pairs_mvep = (
+        corr_pairs_mvep
+        .drop_duplicates("pair")
+        .drop(columns="pair")
+    )
 
-    top_low_corr_pairs_mvep = corr_pairs_mvep.sort_values(
-        by="Correlation",
-        ascending=True
-    ).head(low_corr_pair_count)
+    top_low_corr_pairs_mvep = (
+        corr_pairs_mvep
+        .sort_values(by="Correlation", ascending=True)
+        .head(low_corr_pair_count)
+    )
 
-    # 7.2 Ambil unique ticker dari 10 pasangan korelasi terendah
     selected_tickers_mvep = sorted(
         list(
             set(top_low_corr_pairs_mvep["Ticker_1"])
@@ -72,13 +56,11 @@ def run_mvep(
     if len(selected_tickers_mvep) < 2:
         raise ValueError("Jumlah saham terpilih MVEP terlalu sedikit.")
 
-    # 7.3 Subset covariance matrix
     mvep_covariance_matrix = covariance_matrix.loc[
         selected_tickers_mvep,
         selected_tickers_mvep
     ]
 
-    # 7.4 Inverse covariance matrix
     cov_matrix_np = mvep_covariance_matrix.values
 
     try:
@@ -92,7 +74,6 @@ def run_mvep(
         columns=selected_tickers_mvep
     )
 
-    # 7.5 Hitung bobot MVEP
     ones = np.ones(len(selected_tickers_mvep))
 
     mvep_weights = inverse_covariance_matrix @ ones / (
@@ -105,21 +86,8 @@ def run_mvep(
         name="Weight"
     )
 
-    mvep_weights_summary = pd.DataFrame({
-        "Ticker": mvep_weights_series.index,
-        "Weight": mvep_weights_series.values
-    })
-
-    mvep_weights_summary["Allocation"] = (
-        mvep_weights_summary["Weight"] * investment_amount
-    )
-
-    # 7.6 Hitung performa MVEP
     mvep_return_matrix = log_return_matrix[selected_tickers_mvep]
-
-    mvep_portfolio_daily_return = (
-        mvep_return_matrix @ mvep_weights_series
-    )
+    mvep_portfolio_daily_return = mvep_return_matrix @ mvep_weights_series
 
     mvep_portfolio_annual_return = (
         mvep_portfolio_daily_return.mean() * trading_days
@@ -133,6 +101,15 @@ def run_mvep(
         mvep_portfolio_annual_return - risk_free_rate_annual
     ) / mvep_portfolio_annual_volatility
 
+    mvep_weights_summary = pd.DataFrame({
+        "Ticker": mvep_weights_series.index,
+        "Weight": mvep_weights_series.values
+    })
+
+    mvep_weights_summary["Allocation"] = (
+        mvep_weights_summary["Weight"] * investment_amount
+    )
+
     weights_df = mvep_weights_summary.merge(
         stock_summary,
         on="Ticker",
@@ -143,23 +120,6 @@ def run_mvep(
         by="Weight",
         ascending=False
     ).reset_index(drop=True)
-
-    mvep_portfolio_performance = pd.DataFrame({
-        "metric": [
-            "annualized_return",
-            "annualized_volatility",
-            "sharpe_ratio",
-            "selected_stock_count",
-            "total_weight"
-        ],
-        "value": [
-            mvep_portfolio_annual_return,
-            mvep_portfolio_annual_volatility,
-            mvep_portfolio_sharpe,
-            len(selected_tickers_mvep),
-            mvep_weights_series.sum()
-        ]
-    })
 
     return {
         "method": "MVEP",
@@ -173,8 +133,7 @@ def run_mvep(
         "selected_tickers": selected_tickers_mvep,
         "top_low_corr_pairs": top_low_corr_pairs_mvep,
         "mvep_covariance_matrix": mvep_covariance_matrix,
-        "mvep_inverse_covariance_matrix": inverse_covariance_matrix_df,
-        "mvep_portfolio_performance": mvep_portfolio_performance
+        "mvep_inverse_covariance_matrix": inverse_covariance_matrix_df
     }
 
 
@@ -196,9 +155,9 @@ def run_sim(
 
     stock_summary = feature_result["stock_summary"]
     rf = feature_result["annual_risk_free_rate"]
+
     market_variance = sim_market_return.var()
 
-    # 8.2 Residual variance
     residual_variance = {}
 
     for ticker in sim_return_matrix.columns:
@@ -214,7 +173,6 @@ def run_sim(
         name="residual_variance"
     )
 
-    # 8.3 Tabel awal SIM
     sim_table = pd.DataFrame({
         "expected_return": sim_expected_return,
         "alpha": sim_alpha,
@@ -232,18 +190,15 @@ def run_sim(
     if sim_table.empty:
         raise ValueError("Tidak ada saham valid untuk SIM.")
 
-    # 8.4 ERB
     sim_table["ERB"] = (
         sim_table["expected_return"] - rf
     ) / sim_table["beta"]
 
-    # 8.5 Sort ERB
     sim_table = sim_table.sort_values(
         by="ERB",
         ascending=False
     )
 
-    # 8.6 Ai dan Bi
     sim_table["Ai"] = (
         sim_table["beta"] *
         (sim_table["expected_return"] - rf)
@@ -253,7 +208,6 @@ def run_sim(
         sim_table["beta"] ** 2
     ) / sim_table["residual_variance"]
 
-    # 8.7 Ci
     sim_table["cum_Ai"] = sim_table["Ai"].cumsum()
     sim_table["cum_Bi"] = sim_table["Bi"].cumsum()
 
@@ -263,7 +217,6 @@ def run_sim(
         1 + market_variance * sim_table["cum_Bi"]
     )
 
-    # 8.8 Cut-off C*
     eligible_cutoff = sim_table[
         sim_table["ERB"] > sim_table["Ci"]
     ]
@@ -275,19 +228,16 @@ def run_sim(
 
     C_star = eligible_cutoff["Ci"].iloc[-1]
 
-    # 8.9 Saham terpilih
     sim_selected = sim_table[
-        sim_table["ERB"] > C_star
+    sim_table["ERB"] > C_star
     ].copy()
 
-    # 8.10 Zi
     sim_selected["Zi"] = (
         sim_selected["beta"] / sim_selected["residual_variance"]
     ) * (
         sim_selected["ERB"] - C_star
     )
 
-    # 8.11 Bobot
     sim_selected["Weight"] = (
         sim_selected["Zi"] / sim_selected["Zi"].sum()
     )
@@ -295,11 +245,8 @@ def run_sim(
     sim_weights = sim_selected["Weight"]
     sim_selected_tickers = sim_selected.index.tolist()
 
-    # 8.12 Performa SIM
-    sim_portfolio_returns = sim_return_matrix[sim_selected_tickers]
-
     sim_portfolio_daily_return = (
-        sim_portfolio_returns @ sim_weights
+        sim_return_matrix[sim_selected_tickers] @ sim_weights
     )
 
     sim_portfolio_annual_return = (
@@ -314,13 +261,11 @@ def run_sim(
         sim_portfolio_annual_return - rf
     ) / sim_portfolio_annual_volatility
 
-    # 8.13 Portfolio beta
     sim_portfolio_beta = np.sum(
         sim_weights.values *
         sim_beta.loc[sim_selected_tickers].values
     )
 
-    # 8.14 Portfolio alpha
     sim_market_annual_return = sim_market_return.mean() * trading_days
 
     sim_expected_portfolio_return_capm = (
@@ -332,7 +277,6 @@ def run_sim(
         sim_expected_portfolio_return_capm
     )
 
-    # 8.15 Ringkasan bobot SIM
     sim_weights_summary = sim_selected.reset_index().rename(
         columns={"index": "Ticker"}
     )
@@ -371,27 +315,6 @@ def run_sim(
         columns={"index": "Ticker"}
     )
 
-    sim_portfolio_performance = pd.DataFrame({
-        "metric": [
-            "C_star",
-            "annualized_return",
-            "annualized_volatility",
-            "sharpe_ratio",
-            "portfolio_beta",
-            "portfolio_alpha",
-            "selected_stock_count"
-        ],
-        "value": [
-            C_star,
-            sim_portfolio_annual_return,
-            sim_portfolio_annual_volatility,
-            sim_portfolio_sharpe,
-            sim_portfolio_beta,
-            sim_portfolio_alpha,
-            sim_selected.shape[0]
-        ]
-    })
-
     return {
         "method": "SIM",
         "weights": weights_df,
@@ -405,8 +328,7 @@ def run_sim(
         "C_star": C_star,
         "selected_stock_count": sim_selected.shape[0],
         "selected_tickers": sim_selected_tickers,
-        "sim_calculation_table": sim_calculation_table,
-        "sim_portfolio_performance": sim_portfolio_performance
+        "sim_calculation_table": sim_calculation_table
     }
 
 
@@ -432,10 +354,8 @@ def run_capm(
     )
 
     capm_return_matrix = log_return_matrix.copy()
-
     capm_covariance_matrix = covariance_matrix * trading_days
 
-    # 9.2 Hitung beta
     market_variance = market_log_return.var()
 
     beta_values = {}
@@ -449,18 +369,15 @@ def run_capm(
 
     beta_series = pd.Series(beta_values, name="Beta")
 
-    # 9.3 Expected return CAPM
     capm_expected_return = rf + beta_series * (
         market_return_annual - rf
     )
 
     capm_expected_return.name = "Expected_Return_CAPM"
 
-    # 9.4 Excess return
     capm_excess_return = capm_expected_return - rf
     capm_excess_return.name = "Excess_Return"
 
-    # 9.5 Validasi ticker
     capm_tickers = [
         ticker for ticker in capm_expected_return.index
         if ticker in capm_covariance_matrix.index
@@ -479,7 +396,6 @@ def run_capm(
         capm_tickers
     ]
 
-    # 9.6 Inverse covariance matrix
     capm_cov_np = capm_covariance_matrix.values
 
     try:
@@ -493,7 +409,6 @@ def run_capm(
         columns=capm_tickers
     )
 
-    # 9.7 Hitung bobot CAPM
     ones_vector = np.ones(len(capm_tickers))
     excess_return_vector = capm_excess_return.values
 
@@ -518,7 +433,6 @@ def run_capm(
         name="Weight"
     )
 
-    # 9.8 Ringkasan bobot awal
     capm_weights_summary_all = pd.DataFrame({
         "Ticker": capm_weights_series.index,
         "Beta": beta_series.loc[capm_tickers].values,
@@ -527,7 +441,6 @@ def run_capm(
         "Weight": capm_weights_series.values
     })
 
-    # 9.9 Cut-off Top 10
     capm_weights_summary = (
         capm_weights_summary_all
         .sort_values(by="Weight", ascending=False)
@@ -548,12 +461,10 @@ def run_capm(
         name="Weight"
     )
 
-    # 9.10 Daily return CAPM
     capm_portfolio_daily_return = (
         capm_return_matrix[capm_tickers] @ capm_weights_series
     )
 
-    # 9.11 Risiko CAPM
     top_covariance_matrix = capm_covariance_matrix.loc[
         capm_tickers,
         capm_tickers
@@ -569,24 +480,19 @@ def run_capm(
         capm_portfolio_variance
     )
 
-    # 9.12 Return tahunan CAPM
     capm_portfolio_annual_return = (
-        capm_portfolio_daily_return.mean()
-        * trading_days
+        capm_portfolio_daily_return.mean() * trading_days
     )
 
-    # 9.13 Sharpe Ratio
     capm_sharpe_ratio = (
         capm_portfolio_annual_return - rf
     ) / capm_portfolio_annual_volatility
 
-    # 9.14 Portfolio beta
     capm_portfolio_beta = np.sum(
         capm_weights_series.values *
         beta_series.loc[capm_tickers].values
     )
 
-    # 9.15 Portfolio alpha
     expected_capm_portfolio_return = (
         rf +
         capm_portfolio_beta *
@@ -598,7 +504,22 @@ def run_capm(
         expected_capm_portfolio_return
     )
 
-    # 9.16 Summary performance
+    capm_weights_summary["Allocation"] = (
+        capm_weights_summary["Weight"] * investment_amount
+    )
+
+    weights_df = capm_weights_summary.merge(
+        stock_summary,
+        on="Ticker",
+        how="left",
+        suffixes=("", "_summary")
+    )
+
+    weights_df = weights_df.sort_values(
+        by="Weight",
+        ascending=False
+    ).reset_index(drop=True)
+
     capm_portfolio_summary = pd.DataFrame({
         "Metric": [
             "Annualized Return",
@@ -625,23 +546,6 @@ def run_capm(
             capm_weights_series.sum()
         ]
     })
-
-    # 9.17 Alokasi dana
-    capm_weights_summary["Allocation"] = (
-        capm_weights_summary["Weight"] * investment_amount
-    )
-
-    weights_df = capm_weights_summary.merge(
-        stock_summary,
-        on="Ticker",
-        how="left",
-        suffixes=("", "_summary")
-    )
-
-    weights_df = weights_df.sort_values(
-        by="Weight",
-        ascending=False
-    ).reset_index(drop=True)
 
     return {
         "method": "CAPM",
@@ -765,7 +669,6 @@ def compare_all_models(
         ]
     })
 
-    # Perbandingan bobot saham antar model
     mvep_weight_compare = mvep_result["weights"][["Ticker", "Weight"]].copy()
     mvep_weight_compare = mvep_weight_compare.rename(
         columns={"Weight": "MVEP_Weight"}

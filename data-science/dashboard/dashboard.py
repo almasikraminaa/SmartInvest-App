@@ -83,23 +83,21 @@ load_css(Path("assets/style.css"))
 
 index_map = {
     "LQ45": [
-        "AADI.JK", "ADMR.JK", "ADRO.JK", "AKRA.JK", "AMMN.JK",
-        "AMRT.JK", "ANTM.JK", "ARTO.JK", "ASII.JK", "BBCA.JK",
-        "BBNI.JK", "BBRI.JK", "BBTN.JK", "BMRI.JK", "BRIS.JK",
-        "BRPT.JK", "CPIN.JK", "CTRA.JK", "ESSA.JK", "EXCL.JK",
-        "GOTO.JK", "ICBP.JK", "INCO.JK", "INDF.JK", "INKP.JK",
-        "ISAT.JK", "ITMG.JK", "JPFA.JK", "JSMR.JK", "KLBF.JK",
-        "MAPA.JK", "MAPI.JK", "MBMA.JK", "MDKA.JK", "MEDC.JK",
-        "PGAS.JK", "PGEO.JK", "PTBA.JK", "SIDO.JK", "SMGR.JK",
-        "TLKM.JK", "TOWR.JK", "UNTR.JK", "UNVR.JK", "WIFI.JK"
+    "AADI.JK","ADMR.JK","ADRO.JK","AKRA.JK","AMMN.JK","AMRT.JK",
+    "ANTM.JK","ASII.JK","BBCA.JK","BBNI.JK","BBRI.JK","BBTN.JK",
+    "BMRI.JK","BRPT.JK","BUMI.JK","CPIN.JK","CUAN.JK","DEWA.JK",
+    "EMTK.JK","ESSA.JK","EXCL.JK","GOTO.JK","HRTA.JK","ICBP.JK",
+    "INCO.JK","INDF.JK","INKP.JK","ISAT.JK","ITMG.JK","JPFA.JK",
+    "KLBF.JK","MAPI.JK","MBMA.JK","MDKA.JK","MEDC.JK","PGAS.JK",
+    "PGEO.JK","PTBA.JK","SCMA.JK","SMGR.JK","TLKM.JK","TOWR.JK",
+    "UNTR.JK","UNVR.JK","WIFI.JK"
     ],
     "IDX30": [
-        "ADRO.JK", "AMRT.JK", "ANTM.JK", "ASII.JK", "BBCA.JK",
-        "BBNI.JK", "BBRI.JK", "BMRI.JK", "BRPT.JK", "CPIN.JK",
-        "GOTO.JK", "ICBP.JK", "INCO.JK", "INDF.JK", "ISAT.JK",
-        "KLBF.JK", "MAPI.JK", "MBMA.JK", "MDKA.JK", "MEDC.JK",
-        "PGAS.JK", "PGEO.JK", "PTBA.JK", "SMGR.JK", "TLKM.JK",
-        "UNTR.JK", "UNVR.JK"
+    "AADI.JK","ADMR.JK","ADRO.JK","AMRT.JK","ANTM.JK","ASII.JK",
+    "BBCA.JK","BBNI.JK","BBRI.JK","BMRI.JK","BRPT.JK","BUMI.JK",
+    "CPIN.JK","EMTK.JK","GOTO.JK","ICBP.JK","INCO.JK","INDF.JK",
+    "INKP.JK","JPFA.JK","KLBF.JK","MBMA.JK","MDKA.JK","MEDC.JK",
+    "PGAS.JK","PGEO.JK","PTBA.JK","TLKM.JK","UNTR.JK","UNVR.JK"
     ]
 }
 
@@ -298,11 +296,6 @@ with tab_eda:
         """
     )
 
-    # =====================================================
-    # DEFAULT EDA MODE: RAW DATA
-    # AFTER RUN ANALYSIS: FILTERED PRICE MATRIX
-    # =====================================================
-
     if st.session_state.analysis_result is None:
 
         eda_index_choice = st.radio(
@@ -314,9 +307,7 @@ with tab_eda:
         eda_price_matrix = raw_price_matrix
 
         eda_index_map = {
-            "LQ45": [
-                ticker for ticker in raw_price_matrix.columns
-            ],
+            "LQ45": raw_price_matrix.columns.tolist(),
             "IDX30": [
                 ticker for ticker in index_map["IDX30"]
                 if ticker in raw_price_matrix.columns
@@ -563,7 +554,6 @@ with tab_portfolio:
         filtering_summary = filtered_result["filtering_summary"]
         feature_summary = feature_result["feature_engineering_summary"]
         comparison_df = all_model_result["comparison_df"]
-
         weights_df = selected_result["weights"]
 
         st.subheader("Input Summary")
@@ -599,25 +589,10 @@ with tab_portfolio:
 
         col_fe1, col_fe2, col_fe3, col_fe4 = st.columns(4)
 
-        col_fe1.metric(
-            "Initial Stocks",
-            feature_summary["initial_ticker_count"]
-        )
-
-        col_fe2.metric(
-            "Removed Negative Return",
-            feature_summary["removed_negative_return_count"]
-        )
-
-        col_fe3.metric(
-            "Final Stocks",
-            feature_summary["final_ticker_count"]
-        )
-
-        col_fe4.metric(
-            "Risk-Free Rate",
-            format_percent(feature_summary["risk_free_rate_annual"])
-        )
+        col_fe1.metric("Initial Stocks", feature_summary["initial_ticker_count"])
+        col_fe2.metric("Removed Negative Return", feature_summary["removed_negative_return_count"])
+        col_fe3.metric("Final Stocks", feature_summary["final_ticker_count"])
+        col_fe4.metric("Risk-Free Rate", format_percent(feature_summary["risk_free_rate_annual"]))
 
         with st.expander("Lihat Saham yang Dieliminasi karena Return Negatif"):
             st.write(feature_summary["removed_negative_return_tickers"])
@@ -786,12 +761,10 @@ with tab_portfolio:
         )
 
         fig_beta = plot_portfolio_beta_comparison(comparison_df)
-
         if fig_beta is not None:
             st.plotly_chart(fig_beta, use_container_width=True)
 
         fig_alpha = plot_portfolio_alpha_comparison(comparison_df)
-
         if fig_alpha is not None:
             st.plotly_chart(fig_alpha, use_container_width=True)
 
