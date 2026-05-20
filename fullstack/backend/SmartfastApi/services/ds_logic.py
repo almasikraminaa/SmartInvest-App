@@ -658,7 +658,7 @@ def analyze_portfolio_logic(
     # TREYNOR RATIO
     # ==========================
 
-    risk_free_rate = 5
+    risk_free_rate = float(feature_result["annual_risk_free_rate"] * 100)
 
     annual_return = round(
         float(
