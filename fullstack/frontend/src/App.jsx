@@ -1,7 +1,7 @@
 // src/App.jsx
 import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { supabase } from "./lib/supabase";
+import { supabase } from "./lib/supabase.js";
 import Sidebar from "./components/layout/Sidebar";
 import AnalysisModal from "./components/features/analysis/AnalysisModal";
 import LoginPage from "./pages/LoginPage";
