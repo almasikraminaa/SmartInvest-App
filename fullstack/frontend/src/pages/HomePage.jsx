@@ -49,28 +49,38 @@ export default function HomePage({ setIsAnalysisModalOpen }) {
         {/* ── 1. Hero ── */}
         <section className="bg-smart-navy rounded-3xl p-10 text-white shadow-md relative overflow-hidden">
           <div className="absolute top-0 right-0 w-80 h-80 bg-white opacity-5 rounded-full blur-3xl translate-x-1/4 -translate-y-1/4 pointer-events-none"/>
-          <div className="relative z-10 max-w-2xl">
-            <h1 className="text-4xl font-extrabold mb-4 leading-tight tracking-tight">
+          <div className="relative z-10 max-w-2xl flex flex-col gap-5">
+
+            {/* Posisi 1: Judul Utama */}
+            <h1 className="text-4xl font-extrabold leading-tight tracking-tight">
               Smart Allocation for <br/>
               <span className="text-smart-green">Maximum Returns</span>
             </h1>
-            <p className="text-gray-300 text-sm leading-relaxed mb-8 max-w-xl">
-              Leverage the power of the Minimum Variance Efficient Portfolio (MVEP) method to build a robust,
-              data-driven investment strategy tailored for the Indonesian stock market.
+
+            {/* Posisi 2: Label Tentang Kami */}
+            <span className="text-xs font-semibold text-blue-300 uppercase tracking-wider">Tentang Kami</span>
+
+            {/* Posisi 3: Paragraf Deskripsi */}
+            <p className="text-gray-300 text-sm leading-relaxed max-w-xl">
+              SmartInvest adalah platform analisis portofolio modern yang dirancang untuk membantu Anda menentukan alokasi investasi optimal secara ilmiah. Dengan memanfaatkan data historis pasar saham dan kecerdasan buatan, sistem kami mengintegrasikan tiga metode finansial teruji—MVEP, SIM, dan CAPM—untuk mereduksi risiko sekaligus memaksimalkan potensi keuntungan portofolio Anda.{' '}
+              <button onClick={() => setShowAboutModal(true)} className="text-smart-green hover:underline font-medium">(baca selengkapnya...)</button>
             </p>
-            <div className="flex items-center gap-4">
+
+            {/* Posisi 5: Tombol Akses */}
+            <div className="flex items-center gap-4 mt-2">
               <button onClick={handleStartAnalysis}
                 className="bg-smart-green text-white px-7 py-3 rounded-xl font-bold text-sm hover:bg-[#00b86a] transition-colors flex items-center gap-2">
-                Start Analysis
+                Mulai Analisis
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
                 </svg>
               </button>
-              <button onClick={()=>navigate('/method')}
+              <button onClick={() => navigate('/method')}
                 className="bg-white/10 text-white px-7 py-3 rounded-xl font-bold text-sm hover:bg-white/20 transition-colors border border-white/10 backdrop-blur-sm">
-                Learn Our Method
+                Pelajari Metode Kami
               </button>
             </div>
+
           </div>
         </section>
 
@@ -97,71 +107,63 @@ export default function HomePage({ setIsAnalysisModalOpen }) {
           </div>
         </div>
 
-        {/* ── 3. About Us ── */}
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col md:flex-row gap-8 items-center justify-between">
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold text-smart-navy mb-2">About Us</h2>
-            <p className="text-gray-500 text-sm font-medium mb-4">Revolusi Teknologi Keuangan untuk Generasi Muda.</p>
-            <p className="text-gray-600 text-sm leading-relaxed mb-6">
-              SmartInvest hadir untuk menjembatani tingginya minat investasi saham dengan analisis berbasis data yang solid.
-              Kami menggabungkan teori portofolio kuantitatif (seperti MVEP) dengan Kecerdasan Buatan (AI) untuk membantu
-              Anda mengambil keputusan finansial yang rasional dan terukur, bukan sekadar spekulasi.
-            </p>
-            <button onClick={()=>setShowAboutModal(true)}
-              className="bg-smart-navy text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity">
-              Baca Selengkapnya...
-            </button>
-          </div>
-          <div className="w-full md:w-[40%] aspect-video bg-[#2A2D34] rounded-xl flex items-center justify-center overflow-hidden">
-            <span className="text-white opacity-50 text-sm font-medium">[ Area Gambar / Logo ]</span>
-          </div>
-        </section>
-
-        {/* ── 4. Method Cards ── */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            {
-              id:"mvep", bg:"bg-blue-50", color:"text-blue-500",
-              icon: <><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></>,
-              title:"MVEP",
-              desc:"Minimum Variance Efficient Portfolio: Mengoptimalkan bobot aset Anda untuk meminimalkan risiko pada tingkat return tertentu.",
-            },
-            {
-              id:"sim", bg:"bg-green-50", color:"text-smart-green",
-              icon: <><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></>,
-              title:"SIM",
-              desc:"Single Index Model: Mengukur risiko dan return saham berdasarkan pergerakan pasar secara keseluruhan untuk mendapatkan portofolio optimal.",
-            },
-            {
-              id:"caf", bg:"bg-purple-50", color:"text-purple-500",
-              icon: <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>,
-              title:"CAF",
-              desc:"Constant Allocation Fund: Memfokuskan pembagian dana secara konstan pada aset untuk menjaga profil keseimbangan risiko secara otomatis.",
-            },
-          ].map(({ id, bg, color, icon, title, desc }) => (
-            <div key={id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex flex-col items-center text-center hover:shadow-md transition-shadow">
-              <div onClick={()=>navigate(`/method#${id}`)}
-                className={`w-14 h-14 ${bg} ${color} rounded-2xl flex items-center justify-center mb-5 cursor-pointer hover:scale-110 transition-transform`}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  {icon}
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold text-smart-navy mb-3">{title}</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
-            </div>
-          ))}
-        </section>
-
         {/* ── Modal About Us ── */}
         {showAboutModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-smart-navy/60 backdrop-blur-md p-6">
-            <div className="bg-white rounded-2xl w-full max-w-lg p-8 shadow-2xl border border-gray-100 flex flex-col gap-4">
-              <h2 className="text-xl font-bold text-smart-navy">About SmartInvest</h2>
-              <div className="min-h-[200px] flex items-center justify-center text-gray-300 text-sm">
-                <p>Konten selengkapnya akan ditampilkan di sini.</p>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-smart-navy/60 backdrop-blur-md p-6 animate-fade-in" onClick={(e) => { if (e.target === e.currentTarget) setShowAboutModal(false); }}>
+            <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-8 shadow-2xl border border-gray-100 flex flex-col gap-5">
+              <h2 className="text-xl font-bold text-smart-navy">Tentang Kami — SmartInvest</h2>
+
+              <p className="text-sm text-gray-600 leading-relaxed">
+                <span className="font-semibold text-smart-navy">SmartInvest</span> adalah platform investasi berbasis AI yang dirancang khusus untuk <em>beginner investor</em> yang ingin memahami dunia saham dengan cara yang lebih sederhana, modern, dan terarah.
+              </p>
+
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Banyak orang ingin mulai investasi, tetapi bingung membaca chart, memahami risiko, atau menentukan saham yang layak dipilih. Tidak sedikit yang akhirnya hanya mengikuti tren tanpa mengetahui alasan di balik keputusan investasinya.
+              </p>
+
+              <p className="text-sm text-gray-600 leading-relaxed font-medium">
+                SmartInvest membantu mengubah proses tersebut menjadi pengalaman investasi yang lebih mudah dipahami dan lebih nyaman digunakan.
+              </p>
+
+              <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Metode Portofolio Modern</p>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li className="flex items-start gap-2"><span className="text-blue-500 mt-0.5">•</span><span><span className="font-semibold">MVEP</span> (Mean Variance Efficient Portfolio) — membantu menemukan kombinasi portofolio dengan risiko minimum.</span></li>
+                  <li className="flex items-start gap-2"><span className="text-green-500 mt-0.5">•</span><span><span className="font-semibold">SIM</span> (Single Index Model) — menganalisis hubungan saham terhadap pergerakan pasar.</span></li>
+                  <li className="flex items-start gap-2"><span className="text-purple-500 mt-0.5">•</span><span><span className="font-semibold">CAPM</span> (Capital Asset Pricing Model) — mengukur hubungan antara risiko saham dan potensi keuntungannya.</span></li>
+                </ul>
               </div>
-              <button onClick={()=>setShowAboutModal(false)}
-                className="self-end bg-gray-100 text-gray-600 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all">
+
+              <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Yang Bisa SmartInvest Bantu</p>
+                <ul className="space-y-1.5 text-sm text-gray-600">
+                  <li className="flex items-center gap-2"><span className="text-smart-green">✓</span> Menganalisis performa saham</li>
+                  <li className="flex items-center gap-2"><span className="text-smart-green">✓</span> Menghitung risiko dan potensi return</li>
+                  <li className="flex items-center gap-2"><span className="text-smart-green">✓</span> Memprediksi tren pasar</li>
+                  <li className="flex items-center gap-2"><span className="text-smart-green">✓</span> Memperoleh rekomendasi portofolio optimal secara otomatis</li>
+                </ul>
+              </div>
+
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Setiap analisis dirancang dengan tampilan yang interaktif, intuitif, dan <em>beginner-friendly</em> agar pengguna dapat memahami proses investasi tanpa harus memiliki latar belakang finansial atau data science.
+              </p>
+
+              <div className="border-l-4 border-smart-navy pl-4 py-2">
+                <p className="text-sm text-gray-700 leading-relaxed font-medium">
+                  SmartInvest bukan hanya tempat melakukan perhitungan investasi. SmartInvest adalah tempat untuk belajar memahami pasar, mengenali risiko, dan membangun keputusan finansial yang lebih cerdas berbasis data.
+                </p>
+              </div>
+
+              <p className="text-sm text-gray-500 italic leading-relaxed">
+                Karena investasi yang baik bukan tentang ikut-ikutan. Investasi yang baik dimulai dari keputusan yang dipahami dengan baik.
+              </p>
+
+              <p className="text-sm font-bold text-smart-navy">
+                Analyze smarter. Invest better. Grow confidently. 🚀
+              </p>
+
+              <button onClick={() => setShowAboutModal(false)}
+                className="self-end bg-gray-100 text-gray-600 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all mt-2">
                 Tutup
               </button>
             </div>
