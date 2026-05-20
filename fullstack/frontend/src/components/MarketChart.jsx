@@ -782,14 +782,10 @@ export default function MarketChart() {
   const fetchChart = useCallback(async () => {
     setChartLoading(true);
     try {
-      const targetUrl = encodeURIComponent(
-        `https://query1.finance.yahoo.com/v8/finance/chart/%5EJKSE?interval=${tf.interval}&range=${tf.range}`,
-      );
       const res = await fetch(
-        `https://api.allorigins.win/get?url=${targetUrl}`,
+        `/api/yahoo/v8/finance/chart/%5EJKSE?interval=${tf.interval}&range=${tf.range}`,
       );
-      const wrapper = await res.json();
-      const data = JSON.parse(wrapper.contents);
+      const data = await res.json();
 
       const result = data?.chart?.result?.[0];
       const meta = result?.meta;
@@ -862,14 +858,10 @@ export default function MarketChart() {
       await Promise.all(
         PERF_TFS.map(async (r) => {
           try {
-            const tUrl = encodeURIComponent(
-              `https://query1.finance.yahoo.com/v8/finance/chart/%5EJKSE?interval=${r.interval}&range=${r.range}`,
-            );
             const res = await fetch(
-              `https://api.allorigins.win/get?url=${tUrl}`,
+              `/api/yahoo/v8/finance/chart/%5EJKSE?interval=${r.interval}&range=${r.range}`,
             );
-            const wrap = await res.json();
-            const data = JSON.parse(wrap.contents);
+            const data = await res.json();
 
             const result = data?.chart?.result?.[0];
             const closes = (result?.indicators?.quote?.[0]?.close ?? []).filter(
@@ -907,12 +899,10 @@ export default function MarketChart() {
   /* ── Fetch diary ── */
   const fetchDiary = useCallback(async () => {
     try {
-      const tUrl = encodeURIComponent(
-        `https://query1.finance.yahoo.com/v8/finance/chart/%5EJKSE?interval=1d&range=3mo`,
+      const res = await fetch(
+        `/api/yahoo/v8/finance/chart/%5EJKSE?interval=1d&range=3mo`,
       );
-      const res = await fetch(`https://api.allorigins.win/get?url=${tUrl}`);
-      const wrap = await res.json();
-      const data = JSON.parse(wrap.contents);
+      const data = await res.json();
 
       const result = data?.chart?.result?.[0];
       const ts = result?.timestamp ?? [];
