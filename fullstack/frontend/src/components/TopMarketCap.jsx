@@ -347,6 +347,7 @@ export default function TopMarketCap() {
               );
             })}
       </div>
+      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">Daftar emiten saham unggulan dengan harga saat ini dan persentase perubahan. Garis indikator (merah-hijau) dengan titik biru memvisualisasikan posisi harga di antara titik terendah (L) dan tertingginya (H).</p>
     </div>
   );
 }

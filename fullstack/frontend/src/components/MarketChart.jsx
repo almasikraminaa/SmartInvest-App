@@ -525,6 +525,7 @@ function OHLCGrid({ quote, loading }) {
           </div>
         ))}
       </div>
+      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">Tabel data yang merangkum pergerakan harga pasar: harga pembukaan (Open), nilai tertinggi (High), terendah (Low), penutupan sebelumnya (Prev Close), serta persentase perubahan (Change).</p>
     </div>
   );
 }
@@ -585,6 +586,7 @@ function IndexPerformance({ perfs, loading }) {
           );
         })}
       </div>
+      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">Grafik batang horizontal yang menunjukkan persentase naik-turunnya performa indeks dalam berbagai periode waktu (1D, 1W, 1M, 3M, YTD, 1Y, 5Y). Bar merah = negatif, bar hijau = positif.</p>
     </div>
   );
 }
@@ -654,6 +656,7 @@ function LowHighRange({ ranges, currentPrice, loading }) {
           );
         })}
       </div>
+      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">Indikator visual posisi nilai saat ini di antara batas terendah (Low) dan tertinggi (High) pada berbagai rentang waktu. Panah kecil menandai posisi harga saat ini.</p>
     </div>
   );
 }
@@ -762,6 +765,7 @@ function IndexDiary({ diary, loading }) {
           </tbody>
         </table>
       </div>
+      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">Kalender riwayat performa pasar berdasarkan bulan dan hari perdagangan. Warna hijau = kenaikan, merah = penurunan (heatmap visual).</p>
     </div>
   );
 }
@@ -1015,6 +1019,8 @@ export default function MarketChart() {
           range={tf.range}
         />
       </div>
+
+      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">IHSG (Indeks Harga Saham Gabungan) adalah indeks utama Bursa Efek Indonesia yang mencerminkan pergerakan harga seluruh saham tercatat. Data di atas diperbarui secara real-time dari Yahoo Finance.</p>
 
       <OHLCGrid quote={quote} loading={chartLoading} />
       <IndexPerformance perfs={perfs} loading={perfLoading} />

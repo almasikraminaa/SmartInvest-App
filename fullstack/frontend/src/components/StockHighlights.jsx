@@ -228,6 +228,7 @@ export default function StockHighlights({ onViewAll }) {
               );
             })}
       </div>
+      <p className="px-1 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50 mt-2">Daftar saham pilihan dari indeks LQ45/IDX30 yang menampilkan harga terkini dan persentase perubahan harian. Klik "View All" untuk melihat seluruh emiten.</p>
     </div>
   );
 }
