@@ -297,19 +297,14 @@ const IDX30_LIST = [
 const ALL_STOCKS = [
   ...new Map(
     [...LQ45_LIST, ...IDX30_LIST].map((s) => {
-      // Cari apakah saham ini ada di kedua list
       const isLQ45 = LQ45_LIST.some((l) => l.code === s.code);
       const isIDX30 = IDX30_LIST.some((i) => i.code === s.code);
-
-      let indexType = "";
-      if (isLQ45 && isIDX30) indexType = "BOTH";
-      else if (isLQ45) indexType = "LQ45";
-      else indexType = "IDX30";
-
+      let indexType = isLQ45 && isIDX30 ? "BOTH" : isLQ45 ? "LQ45" : "IDX30";
       return [s.code, { ...s, indexGroup: indexType }];
     }),
   ).values(),
 ];
+
 const SECTORS = [
   "Semua",
   "Perbankan",
@@ -372,17 +367,27 @@ function TrendIcon({ up, size = 10 }) {
 }
 
 async function fetchOne(s) {
-  const res = await fetch(
-    `/yahoo/v8/finance/chart/${s.code}?interval=1d&range=5d`,
-  );
-  const data = await res.json();
-  const meta = data?.chart?.result?.[0]?.meta;
-  const quotes = data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? [];
-  const valid = quotes.filter((c) => c !== null && isFinite(Number(c)));
-  const cur = safeNum(meta?.regularMarketPrice) ?? safeNum(valid.at(-1));
-  const mp = safeNum(meta?.previousClose);
-  const prev = mp && mp !== cur ? mp : safeNum(valid.at(-2));
-  return { ...s, price: cur, change: safeChange(cur, prev), error: false };
+  try {
+    // ⚡ BYPASS PROXY: Pembungkusan AllOrigins CORS Bypass untuk list data saham ⚡
+    const targetUrl = encodeURIComponent(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${s.code}?interval=1d&range=5d`,
+    );
+    const res = await fetch(`https://api.allorigins.win/get?url=${targetUrl}`);
+    const wrap = await res.json();
+    const data = JSON.parse(wrap.contents);
+
+    const meta = data?.chart?.result?.[0]?.meta;
+    const quotes =
+      data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? [];
+    const valid = quotes.filter((c) => c !== null && isFinite(Number(c)));
+    const cur = safeNum(meta?.regularMarketPrice) ?? safeNum(valid.at(-1));
+    const mp = safeNum(meta?.previousClose);
+    const prev = mp && mp !== cur ? mp : safeNum(valid.at(-2));
+
+    return { ...s, price: cur, change: safeChange(cur, prev), error: false };
+  } catch {
+    return { ...s, price: null, change: null, error: true };
+  }
 }
 
 export default function AllStocksPage({ onBack }) {
@@ -390,12 +395,13 @@ export default function AllStocksPage({ onBack }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [indexFilter, setIndexFilter] = useState("Semua"); // Semua | LQ45 | IDX30
+  const [indexFilter, setIndexFilter] = useState("Semua");
   const [sector, setSector] = useState("Semua");
   const [sortBy, setSortBy] = useState("label");
 
   const fetchAll = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
+    else setLoading(true);
     const settled = await Promise.allSettled(ALL_STOCKS.map(fetchOne));
     setStocks(
       settled.map((r, i) =>
@@ -434,11 +440,10 @@ export default function AllStocksPage({ onBack }) {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <button
           onClick={onBack}
-          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors text-gray-500 flex-shrink-0"
+          className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 flex-shrink-0"
         >
           <svg
             width="18"
@@ -447,8 +452,6 @@ export default function AllStocksPage({ onBack }) {
             fill="none"
             stroke="currentColor"
             strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
           >
             <polyline points="15 18 9 12 15 6" />
           </svg>
@@ -458,7 +461,7 @@ export default function AllStocksPage({ onBack }) {
             All Stock Highlights
           </h2>
           <p className="text-gray-400 text-xs">
-            Konstituen LQ45 &amp; IDX30 · Yahoo Finance
+            Konstituen LQ45 &amp; IDX30 · Live Cloud Link
           </p>
         </div>
         <button
@@ -473,8 +476,6 @@ export default function AllStocksPage({ onBack }) {
             fill="none"
             stroke="currentColor"
             strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
             className={refreshing ? "animate-spin" : ""}
           >
             <polyline points="23 4 23 10 17 10" />
@@ -484,7 +485,6 @@ export default function AllStocksPage({ onBack }) {
         </button>
       </div>
 
-      {/* Stats + filter indeks */}
       {!loading && (
         <div className="flex items-center gap-2 mb-3 flex-wrap">
           <div className="flex gap-1">
@@ -492,11 +492,7 @@ export default function AllStocksPage({ onBack }) {
               <button
                 key={idx}
                 onClick={() => setIndexFilter(idx)}
-                className={`text-xs px-3 py-1 rounded-lg font-bold transition-colors ${
-                  indexFilter === idx
-                    ? "bg-smart-navy text-white"
-                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                }`}
+                className={`text-xs px-3 py-1 rounded-lg font-bold transition-colors ${indexFilter === idx ? "bg-smart-navy text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
               >
                 {idx}
               </button>
@@ -513,7 +509,6 @@ export default function AllStocksPage({ onBack }) {
         </div>
       )}
 
-      {/* Filter sektor + sort */}
       {!loading && (
         <div className="flex gap-2 mb-4 items-center flex-wrap">
           <div className="flex gap-1.5 flex-wrap flex-1">
@@ -521,11 +516,7 @@ export default function AllStocksPage({ onBack }) {
               <button
                 key={s}
                 onClick={() => setSector(s)}
-                className={`text-xs px-2.5 py-1 rounded-lg font-semibold transition-colors ${
-                  sector === s
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                }`}
+                className={`text-xs px-2.5 py-1 rounded-lg font-semibold transition-colors ${sector === s ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
               >
                 {s}
               </button>
@@ -534,7 +525,7 @@ export default function AllStocksPage({ onBack }) {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-500 bg-white outline-none cursor-pointer"
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-500 bg-white outline-none"
           >
             <option value="label">A–Z</option>
             <option value="change">% Tertinggi</option>
@@ -542,7 +533,6 @@ export default function AllStocksPage({ onBack }) {
         </div>
       )}
 
-      {/* Timestamp */}
       {!loading && (
         <p className="text-xs text-gray-400 mb-2">
           {lastUpdated &&
@@ -550,7 +540,6 @@ export default function AllStocksPage({ onBack }) {
         </p>
       )}
 
-      {/* Table header */}
       {!loading && (
         <div className="grid grid-cols-3 px-3 mb-1">
           <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
@@ -565,10 +554,9 @@ export default function AllStocksPage({ onBack }) {
         </div>
       )}
 
-      {/* List */}
       <div className="flex flex-col gap-1 max-h-[52vh] overflow-y-auto pr-1">
         {loading ? (
-          Array.from({ length: 8 }).map((_, i) => (
+          Array.from({ length: 5 }).map((_, i) => (
             <div
               key={i}
               className="flex items-center gap-3 p-3 rounded-xl animate-pulse"
@@ -577,10 +565,6 @@ export default function AllStocksPage({ onBack }) {
               <div className="flex-1 space-y-2">
                 <div className="h-3 bg-gray-100 rounded w-16" />
                 <div className="h-2.5 bg-gray-100 rounded w-28" />
-              </div>
-              <div className="space-y-2 text-right ml-auto">
-                <div className="h-3 bg-gray-100 rounded w-20" />
-                <div className="h-2.5 bg-gray-100 rounded w-12 ml-auto" />
               </div>
             </div>
           ))
@@ -594,7 +578,7 @@ export default function AllStocksPage({ onBack }) {
             return (
               <div
                 key={stock.code}
-                className="grid grid-cols-3 items-center p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-gray-100"
+                className="grid grid-cols-3 items-center p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-gray-100"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <Avatar code={stock.label} up={!stock.error && up} />
@@ -626,8 +610,7 @@ export default function AllStocksPage({ onBack }) {
                     <span className="text-xs text-gray-400 italic">Gagal</span>
                   ) : (
                     <span
-                      className={`inline-flex items-center justify-end gap-0.5 text-xs font-semibold px-2 py-1 rounded-lg
-                          ${up ? "text-emerald-600 bg-emerald-50" : "text-red-500 bg-red-50"}`}
+                      className={`inline-flex items-center justify-end gap-0.5 text-xs font-semibold px-2 py-1 rounded-lg ${up ? "text-emerald-600 bg-emerald-50" : "text-red-500 bg-red-50"}`}
                     >
                       <TrendIcon up={up} />
                       {up ? "+" : ""}
