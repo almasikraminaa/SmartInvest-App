@@ -1,16 +1,4 @@
-// PATCH untuk HomePage.jsx
-// Ganti bagian "Market Chart panel" dari ini:
-//
-//   <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 overflow-y-auto"
-//     style={{maxHeight:"90vh"}}>
-//     <MarketChart/>
-//   </div>
-//
-// Menjadi ini (hapus overflow-y-auto dan maxHeight):
-//
-//   <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-//     <MarketChart/>
-//   </div>
+
 
 // ─────────────────────────────────────────────────────────────────────
 // src/pages/HomePage.jsx  (FULL FILE — sudah dipatch)
