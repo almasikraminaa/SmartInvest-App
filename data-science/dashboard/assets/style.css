@@ -1,9 +1,54 @@
 /* =========================================================
-BACKGROUND
+SMARTINVEST DASHBOARD THEME
+Clean Financial Analytics UI
+========================================================= */
+
+/* =========================================================
+GLOBAL BACKGROUND & FONT
 ========================================================= */
 
 .stApp {
-    background-color: #f5f7fb;
+    background: #f4f7fb;
+    color: #1e293b;
+    font-family: "Inter", "Segoe UI", sans-serif;
+}
+
+.block-container {
+    padding-top: 1.4rem;
+    padding-bottom: 2rem;
+    max-width: 1280px;
+}
+
+/* =========================================================
+TYPOGRAPHY
+========================================================= */
+
+h1 {
+    color: #1e293b;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    margin-bottom: 0.35rem;
+}
+
+h2, h3 {
+    color: #1e293b;
+    font-weight: 750;
+    letter-spacing: -0.025em;
+}
+
+p, span, label {
+    color: #334155;
+}
+
+[data-testid="stCaptionContainer"] {
+    color: #7a8798;
+    font-size: 0.88rem;
+}
+
+hr {
+    margin-top: 1.45rem;
+    margin-bottom: 1.45rem;
+    border-color: #dbe3ee;
 }
 
 /* =========================================================
@@ -11,29 +56,67 @@ SIDEBAR
 ========================================================= */
 
 section[data-testid="stSidebar"] {
-    background-color: #ffffff;
-    border-right: 1px solid #e5e7eb;
+    background: #ffffff;
+    border-right: 1px solid #e2e8f0;
+    box-shadow: 3px 0 14px rgba(15, 23, 42, 0.035);
 }
 
-/* =========================================================
-TITLE
-========================================================= */
+section[data-testid="stSidebar"] > div {
+    padding-top: 1.5rem;
+}
 
-h1, h2, h3 {
-    color: #111827;
+section[data-testid="stSidebar"] h1 {
+    color: #0f172a;
+    font-size: 1.45rem;
+    font-weight: 800;
+}
+
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3 {
+    font-size: 0.95rem;
+    color: #1e293b;
     font-weight: 700;
 }
 
+section[data-testid="stSidebar"] p {
+    color: #64748b;
+    font-size: 0.86rem;
+}
+
 /* =========================================================
-METRIC CARD
+INPUT COMPONENTS
 ========================================================= */
 
-div[data-testid="metric-container"] {
-    background-color: white;
-    border-radius: 18px;
-    padding: 18px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+.stSelectbox,
+.stNumberInput,
+.stDateInput {
+    margin-bottom: 0.55rem;
+}
+
+.stSelectbox label,
+.stNumberInput label,
+.stDateInput label {
+    color: #334155;
+    font-size: 0.86rem;
+    font-weight: 650;
+}
+
+div[data-baseweb="select"] > div,
+div[data-baseweb="input"] > div {
+    border-radius: 12px;
+    border-color: #cbd5e1;
+    background-color: #ffffff;
+}
+
+div[data-baseweb="select"] > div:focus-within,
+div[data-baseweb="input"] > div:focus-within {
+    border-color: #1e3a8a;
+    box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.10);
+}
+
+div[data-baseweb="select"] span {
+    color: #1e293b;
+    font-weight: 600;
 }
 
 /* =========================================================
@@ -42,34 +125,227 @@ BUTTON
 
 .stButton > button {
     width: 100%;
+    min-height: 46px;
     border-radius: 14px;
-    height: 50px;
-    background-color: #1e3a8a;
-    color: white;
+    background: linear-gradient(135deg, #0f2a64 0%, #1e3a8a 100%);
+    color: #ffffff;
     border: none;
-    font-weight: 600;
+    font-weight: 750;
+    letter-spacing: 0.01em;
+    box-shadow: 0 8px 18px rgba(30, 58, 138, 0.22);
+    transition: all 0.2s ease-in-out;
 }
 
 .stButton > button:hover {
-    background-color: #2563eb;
-    color: white;
+    background: linear-gradient(135deg, #163b82 0%, #2554b8 100%);
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(30, 58, 138, 0.28);
+}
+
+.stButton > button:active {
+    transform: translateY(0);
 }
 
 /* =========================================================
 TABS
 ========================================================= */
 
+.stTabs [data-baseweb="tab-list"] {
+    gap: 0.35rem;
+    background-color: #ffffff;
+    padding: 0.35rem;
+    border-radius: 15px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.035);
+}
+
 .stTabs [data-baseweb="tab"] {
-    font-size: 16px;
-    font-weight: 600;
+    height: 40px;
+    padding: 0 1rem;
+    border-radius: 11px;
+    color: #475569;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.stTabs [aria-selected="true"] {
+    background: #eaf1ff;
+    color: #1e3a8a;
 }
 
 /* =========================================================
-INPUT
+METRIC CARD
 ========================================================= */
 
-.stSelectbox,
-.stNumberInput,
-.stDateInput {
+div[data-testid="metric-container"] {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 0.95rem 1rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 5px 16px rgba(15, 23, 42, 0.045);
+    transition: all 0.2s ease-in-out;
+    min-height: 94px;
+}
+
+div[data-testid="metric-container"]:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.075);
+    border-color: #cbd5e1;
+}
+
+div[data-testid="metric-container"] label {
+    color: #64748b !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.035em;
+}
+
+div[data-testid="metric-container"] [data-testid="stMetricValue"] {
+    color: #1e293b;
+    font-size: 1.45rem;
+    font-weight: 800;
+}
+
+div[data-testid="metric-container"] [data-testid="stMetricDelta"] {
+    font-weight: 700;
+}
+
+/* =========================================================
+ALERT / INFO BOX
+========================================================= */
+
+div[data-testid="stAlert"] {
+    border-radius: 14px;
+    border: 1px solid #dbeafe;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.035);
+}
+
+/* =========================================================
+EXPANDER
+========================================================= */
+
+.streamlit-expanderHeader {
+    background-color: #ffffff;
     border-radius: 12px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+div[data-testid="stExpander"] {
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.035);
+    overflow: hidden;
+}
+
+/* =========================================================
+DATAFRAME / TABLE
+========================================================= */
+
+div[data-testid="stDataFrame"] {
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 5px 16px rgba(15, 23, 42, 0.04);
+}
+
+/* =========================================================
+PLOTLY CHART CONTAINER
+========================================================= */
+
+div[data-testid="stPlotlyChart"] {
+    background-color: #ffffff;
+    border-radius: 16px;
+    padding: 0.45rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 5px 16px rgba(15, 23, 42, 0.045);
+    margin-bottom: 0.75rem;
+}
+
+.chart-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 1.25rem 1.5rem;
+
+    border: 1px solid #E2E8F0;
+
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04),
+        0 4px 12px rgba(15, 23, 42, 0.04);
+
+    margin-bottom: 1.5rem;
+
+    overflow: hidden;   /* PENTING */
+}
+
+/* =========================================================
+RADIO
+========================================================= */
+
+.stRadio label {
+    font-weight: 650;
+    color: #334155;
+}
+
+/* =========================================================
+JSON BLOCK
+========================================================= */
+
+pre {
+    border-radius: 14px !important;
+    background-color: #0f172a !important;
+    color: #e2e8f0 !important;
+    padding: 0.9rem !important;
+}
+
+/* =========================================================
+SCROLLBAR
+========================================================= */
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* =========================================================
+MOBILE RESPONSIVE
+========================================================= */
+
+@media (max-width: 768px) {
+    .block-container {
+        padding-left: 0.9rem;
+        padding-right: 0.9rem;
+    }
+
+    div[data-testid="metric-container"] {
+        min-height: 88px;
+    }
+
+    div[data-testid="metric-container"] [data-testid="stMetricValue"] {
+        font-size: 1.25rem;
+    }
+}
+
+div[data-testid="stPlotlyChart"] {
+    overflow: hidden;
+}
+
+div[data-testid="stPlotlyChart"] > div {
+    overflow: hidden;
 }

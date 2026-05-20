@@ -58,7 +58,7 @@ from utils.helper import (
 
 def load_css(file_path):
     if file_path.exists():
-        with open(file_path) as f:
+        with open(file_path, encoding="utf-8") as f:
             st.markdown(
                 f"<style>{f.read()}</style>",
                 unsafe_allow_html=True
@@ -71,10 +71,35 @@ def load_css(file_path):
 
 st.set_page_config(
     page_title="SmartInvest",
+    page_icon="📈",
     layout="wide"
 )
 
 load_css(Path("assets/style.css"))
+
+
+# =========================================================
+# UI HELPER
+# =========================================================
+
+def section_header(title, description=None):
+    st.markdown(f"### {title}")
+    if description:
+        st.caption(description)
+
+
+def render_chart(fig, warning_text="Grafik tidak tersedia."):
+    if fig is not None:
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config={
+                "displayModeBar": False,
+                "responsive": True
+            }
+        )
+    else:
+        st.warning(warning_text)
 
 
 # =========================================================
@@ -83,21 +108,21 @@ load_css(Path("assets/style.css"))
 
 index_map = {
     "LQ45": [
-    "AADI.JK","ADMR.JK","ADRO.JK","AKRA.JK","AMMN.JK","AMRT.JK",
-    "ANTM.JK","ASII.JK","BBCA.JK","BBNI.JK","BBRI.JK","BBTN.JK",
-    "BMRI.JK","BRPT.JK","BUMI.JK","CPIN.JK","CUAN.JK","DEWA.JK",
-    "EMTK.JK","ESSA.JK","EXCL.JK","GOTO.JK","HRTA.JK","ICBP.JK",
-    "INCO.JK","INDF.JK","INKP.JK","ISAT.JK","ITMG.JK","JPFA.JK",
-    "KLBF.JK","MAPI.JK","MBMA.JK","MDKA.JK","MEDC.JK","PGAS.JK",
-    "PGEO.JK","PTBA.JK","SCMA.JK","SMGR.JK","TLKM.JK","TOWR.JK",
-    "UNTR.JK","UNVR.JK","WIFI.JK"
+        "AADI.JK", "ADMR.JK", "ADRO.JK", "AKRA.JK", "AMMN.JK", "AMRT.JK",
+        "ANTM.JK", "ASII.JK", "BBCA.JK", "BBNI.JK", "BBRI.JK", "BBTN.JK",
+        "BMRI.JK", "BRPT.JK", "BUMI.JK", "CPIN.JK", "CUAN.JK", "DEWA.JK",
+        "EMTK.JK", "ESSA.JK", "EXCL.JK", "GOTO.JK", "HRTA.JK", "ICBP.JK",
+        "INCO.JK", "INDF.JK", "INKP.JK", "ISAT.JK", "ITMG.JK", "JPFA.JK",
+        "KLBF.JK", "MAPI.JK", "MBMA.JK", "MDKA.JK", "MEDC.JK", "PGAS.JK",
+        "PGEO.JK", "PTBA.JK", "SCMA.JK", "SMGR.JK", "TLKM.JK", "TOWR.JK",
+        "UNTR.JK", "UNVR.JK", "WIFI.JK"
     ],
     "IDX30": [
-    "AADI.JK","ADMR.JK","ADRO.JK","AMRT.JK","ANTM.JK","ASII.JK",
-    "BBCA.JK","BBNI.JK","BBRI.JK","BMRI.JK","BRPT.JK","BUMI.JK",
-    "CPIN.JK","EMTK.JK","GOTO.JK","ICBP.JK","INCO.JK","INDF.JK",
-    "INKP.JK","JPFA.JK","KLBF.JK","MBMA.JK","MDKA.JK","MEDC.JK",
-    "PGAS.JK","PGEO.JK","PTBA.JK","TLKM.JK","UNTR.JK","UNVR.JK"
+        "AADI.JK", "ADMR.JK", "ADRO.JK", "AMRT.JK", "ANTM.JK", "ASII.JK",
+        "BBCA.JK", "BBNI.JK", "BBRI.JK", "BMRI.JK", "BRPT.JK", "BUMI.JK",
+        "CPIN.JK", "EMTK.JK", "GOTO.JK", "ICBP.JK", "INCO.JK", "INDF.JK",
+        "INKP.JK", "JPFA.JK", "KLBF.JK", "MBMA.JK", "MDKA.JK", "MEDC.JK",
+        "PGAS.JK", "PGEO.JK", "PTBA.JK", "TLKM.JK", "UNTR.JK", "UNVR.JK"
     ]
 }
 
@@ -288,12 +313,9 @@ tab_eda, tab_portfolio = st.tabs(
 with tab_eda:
 
     st.header("📊 Stock Exploratory Data Analysis")
-
     st.caption(
-        """
-        Visualisasi EDA menampilkan gambaran umum pergerakan dan karakteristik saham
-        berdasarkan data historis pasar.
-        """
+        "EDA digunakan untuk memahami karakteristik saham berdasarkan return, risiko, "
+        "volatilitas, Sharpe Ratio, korelasi, dan hubungan risk-return."
     )
 
     if st.session_state.analysis_result is None:
@@ -341,13 +363,6 @@ with tab_eda:
             """
         )
 
-    st.markdown(
-        """
-        EDA digunakan untuk memahami karakteristik saham berdasarkan return, risiko,
-        volatilitas, Sharpe Ratio, korelasi, dan hubungan risk-return.
-        """
-    )
-
     with st.spinner(f"Menjalankan EDA untuk {eda_index_choice}..."):
         eda_result = cached_run_eda(
             index_choice=eda_index_choice,
@@ -357,7 +372,10 @@ with tab_eda:
 
     kpi = eda_result["kpi_summary"]
 
-    st.subheader(f"KPI Summary - {eda_index_choice}")
+    section_header(
+        f"KPI Summary - {eda_index_choice}",
+        "Ringkasan performa umum saham berdasarkan data historis yang dianalisis."
+    )
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -388,86 +406,91 @@ with tab_eda:
 
     st.divider()
 
-    st.subheader("Distribusi Return dan Volatility")
+    section_header(
+        "Distribusi Return dan Volatility",
+        "Melihat sebaran return harian dan tingkat volatilitas tahunan saham."
+    )
 
     col_a, col_b = st.columns(2)
 
     with col_a:
-        st.plotly_chart(
+        render_chart(
             plot_return_distribution(
                 eda_result["eda_log_return"],
                 eda_index_choice
-            ),
-            use_container_width=True
+            )
         )
 
     with col_b:
-        st.plotly_chart(
+        render_chart(
             plot_volatility_distribution(
                 eda_result["eda_stock_summary"],
                 eda_index_choice
-            ),
-            use_container_width=True
+            )
         )
 
     st.divider()
 
-    st.subheader("Top dan Bottom Return")
+    section_header(
+        "Top dan Bottom Return",
+        "Membandingkan saham dengan return tahunan tertinggi dan terendah."
+    )
 
     col_c, col_d = st.columns(2)
 
     with col_c:
-        st.plotly_chart(
+        render_chart(
             plot_top_return(
                 eda_result["top_return"],
                 eda_index_choice
-            ),
-            use_container_width=True
+            )
         )
 
     with col_d:
-        st.plotly_chart(
+        render_chart(
             plot_bottom_return(
                 eda_result["bottom_return"],
                 eda_index_choice
-            ),
-            use_container_width=True
+            )
         )
 
     st.divider()
 
-    st.subheader("Top dan Bottom Risk")
+    section_header(
+        "Top dan Bottom Risk",
+        "Membandingkan saham dengan volatilitas tahunan tertinggi dan terendah."
+    )
 
     col_e, col_f = st.columns(2)
 
     with col_e:
-        st.plotly_chart(
+        render_chart(
             plot_top_risk(
                 eda_result["top_risk"],
                 eda_index_choice
-            ),
-            use_container_width=True
+            )
         )
 
     with col_f:
-        st.plotly_chart(
+        render_chart(
             plot_bottom_risk(
                 eda_result["bottom_risk"],
                 eda_index_choice
-            ),
-            use_container_width=True
+            )
         )
 
     st.divider()
 
-    st.subheader("Sharpe Ratio Ranking")
+    section_header(
+        "Sharpe Ratio Ranking",
+        "Saham dengan efisiensi return terhadap risiko terbaik."
+    )
 
-    st.plotly_chart(
+    render_chart(
         plot_top_sharpe(
             eda_result["top_sharpe"],
             eda_index_choice
-        ),
-        use_container_width=True
+        )
     )
 
     st.dataframe(
@@ -477,55 +500,56 @@ with tab_eda:
 
     st.divider()
 
-    st.subheader("Risk vs Return")
+    section_header(
+        "Risk vs Return",
+        "Visualisasi hubungan antara risiko dan return setiap saham."
+    )
 
-    st.plotly_chart(
+    render_chart(
         plot_risk_return_scatter(
             eda_result["eda_stock_summary"],
             eda_index_choice
-        ),
-        use_container_width=True
+        )
     )
 
     st.divider()
 
-    st.subheader("Correlation Heatmap")
+    section_header(
+        "Correlation Heatmap",
+        "Menganalisis hubungan korelasi antar saham sebagai dasar diversifikasi."
+    )
 
-    st.plotly_chart(
+    render_chart(
         plot_correlation_heatmap(
             eda_result["correlation_matrix"],
             eda_index_choice
-        ),
-        use_container_width=True
+        )
     )
 
     st.divider()
 
-    st.subheader("Cumulative Return dan Rolling Volatility")
+    section_header(
+        "Cumulative Return dan Rolling Volatility",
+        "Melihat pertumbuhan return kumulatif dan perubahan volatilitas dari waktu ke waktu."
+    )
 
     selected_tickers = eda_result["top_return"]["Ticker"].head(5).tolist()
 
-    col_g, col_h = st.columns(2)
-
-    with col_g:
-        st.plotly_chart(
-            plot_cumulative_return(
-                eda_result["cumulative_return"],
-                selected_tickers,
-                eda_index_choice
-            ),
-            use_container_width=True
+    render_chart(
+        plot_cumulative_return(
+            eda_result["cumulative_return"],
+            selected_tickers,
+            eda_index_choice
         )
+    )
 
-    with col_h:
-        st.plotly_chart(
-            plot_rolling_volatility(
-                eda_result["rolling_volatility"],
-                selected_tickers,
-                eda_index_choice
-            ),
-            use_container_width=True
+    render_chart(
+        plot_rolling_volatility(
+            eda_result["rolling_volatility"],
+            selected_tickers,
+            eda_index_choice
         )
+    )
 
 
 # =========================================================
@@ -535,6 +559,10 @@ with tab_eda:
 with tab_portfolio:
 
     st.header("💼 Portfolio Analysis")
+    st.caption(
+        "Analisis portfolio menampilkan rekomendasi alokasi dana, performa portfolio, "
+        "perbandingan model, dan detail teknis proses perhitungan."
+    )
 
     if st.session_state.analysis_result is None:
 
@@ -556,145 +584,78 @@ with tab_portfolio:
         comparison_df = all_model_result["comparison_df"]
         weights_df = selected_result["weights"]
 
-        st.subheader("Input Summary")
+        best_sharpe_model = get_best_model_by_sharpe(comparison_df)
+        lowest_risk_model = get_lowest_risk_model(comparison_df)
+        highest_return_model = get_highest_return_model(comparison_df)
+
+        # =========================================================
+        # 1. EXECUTIVE SUMMARY
+        # =========================================================
+
+        section_header(
+            "Executive Summary",
+            "Ringkasan hasil utama agar pengguna langsung memahami performa portfolio."
+        )
 
         col1, col2, col3, col4 = st.columns(4)
 
-        col1.metric("Selected Model", user_input["model_choice"])
-        col2.metric("Target Index", user_input["index_choice"])
-        col3.metric("Capital", format_rupiah(user_input["investment_amount"]))
-        col4.metric("Trading Days", feature_summary["trading_days_used"])
-
-        st.write(
-            f"Periode analisis: **{user_input['start_date']}** sampai **{user_input['end_date']}**"
-        )
-
-        st.divider()
-
-        st.subheader("Dynamic Filtering Summary")
-
-        col5, col6, col7, col8 = st.columns(4)
-
-        col5.metric("Initial Tickers", filtering_summary["initial_ticker_count"])
-        col6.metric("Available Tickers", filtering_summary["available_ticker_count"])
-        col7.metric("Valid Tickers", filtering_summary["valid_ticker_count"])
-        col8.metric("Removed Tickers", filtering_summary["removed_ticker_count"])
-
-        with st.expander("Lihat Detail Dynamic Filtering"):
-            st.json(filtering_summary)
-
-        st.divider()
-
-        st.subheader("Feature Engineering Summary")
-
-        col_fe1, col_fe2, col_fe3, col_fe4 = st.columns(4)
-
-        col_fe1.metric("Initial Stocks", feature_summary["initial_ticker_count"])
-        col_fe2.metric("Removed Negative Return", feature_summary["removed_negative_return_count"])
-        col_fe3.metric("Final Stocks", feature_summary["final_ticker_count"])
-        col_fe4.metric("Risk-Free Rate", format_percent(feature_summary["risk_free_rate_annual"]))
-
-        with st.expander("Lihat Saham yang Dieliminasi karena Return Negatif"):
-            st.write(feature_summary["removed_negative_return_tickers"])
-
-        st.divider()
-
-        st.subheader(f"Portfolio Metrics - {selected_result['method']}")
-
-        col9, col10, col11, col12 = st.columns(4)
-
-        col9.metric(
+        col1.metric("Selected Model", selected_result["method"])
+        col2.metric(
             "Annualized Return",
             format_percent(selected_result["portfolio_annual_return"])
         )
-
-        col10.metric(
+        col3.metric(
             "Annualized Volatility",
             format_percent(selected_result["portfolio_annual_risk"])
         )
-
-        col11.metric(
+        col4.metric(
             "Sharpe Ratio",
             format_decimal(selected_result["sharpe_ratio"])
         )
 
-        col12.metric(
-            "Selected Stocks",
-            selected_result.get("selected_stock_count", len(weights_df))
+        col5, col6, col7 = st.columns(3)
+
+        col5.metric("Best Sharpe Model", best_sharpe_model)
+        col6.metric("Lowest Risk Model", lowest_risk_model)
+        col7.metric("Highest Return Model", highest_return_model)
+
+        st.info(
+            f"Analisis dilakukan pada indeks **{user_input['index_choice']}** "
+            f"periode **{user_input['start_date']}** sampai **{user_input['end_date']}** "
+            f"dengan modal investasi **{format_rupiah(user_input['investment_amount'])}**."
         )
 
-        if selected_result["method"] == "MVEP":
-            st.info(
-                f"MVEP menggunakan 10 pasangan saham dengan korelasi terendah. "
-                f"Jumlah saham terpilih: {selected_result.get('selected_stock_count', len(weights_df))}. "
-                f"Bobot negatif tetap ditampilkan karena mengikuti hasil matematis MVEP."
-            )
-
-            with st.expander("Lihat Top 10 Pasangan Korelasi Terendah"):
-                if "top_low_corr_pairs" in selected_result:
-                    st.dataframe(
-                        selected_result["top_low_corr_pairs"],
-                        use_container_width=True
-                    )
-
-        elif selected_result["method"] == "SIM":
-            st.info(
-                f"SIM menggunakan cut-off point C* = "
-                f"{format_decimal(selected_result.get('C_star'))}. "
-                f"Saham dipilih berdasarkan kriteria ERB > C*."
-            )
-
-            with st.expander("Lihat Tabel Perhitungan SIM"):
-                if "sim_calculation_table" in selected_result:
-                    st.dataframe(
-                        selected_result["sim_calculation_table"],
-                        use_container_width=True
-                    )
-
-        elif selected_result["method"] == "CAPM":
-            st.info(
-                "CAPM menggunakan cut-off Top 10 saham berdasarkan bobot terbesar, "
-                "lalu bobot dinormalisasi ulang agar total bobot = 1."
-            )
-
-            with st.expander("Lihat Bobot CAPM Sebelum Cut-Off"):
-                if "all_weights_before_cutoff" in selected_result:
-                    st.dataframe(
-                        selected_result["all_weights_before_cutoff"],
-                        use_container_width=True
-                    )
-
         st.divider()
 
-        st.subheader("Portfolio Allocation")
+        # =========================================================
+        # 2. PORTFOLIO RECOMMENDATION
+        # =========================================================
 
-        col13, col14 = st.columns(2)
+        section_header(
+            f"Portfolio Recommendation - {selected_result['method']}",
+            "Komposisi alokasi dana berdasarkan metode portfolio yang dipilih."
+        )
 
-        with col13:
-            fig_pie = plot_portfolio_allocation(
+        render_chart(
+            plot_portfolio_allocation(
                 weights_df,
                 selected_result["method"]
-            )
+            ),
+            warning_text="Grafik pie tidak tersedia karena tidak ada bobot positif."
+        )
 
-            if fig_pie is not None:
-                st.plotly_chart(fig_pie, use_container_width=True)
-            else:
-                st.warning("Grafik pie tidak tersedia karena tidak ada bobot positif.")
-
-        with col14:
-            fig_bar = plot_portfolio_allocation_bar(
+        render_chart(
+            plot_portfolio_allocation_bar(
                 weights_df,
                 selected_result["method"]
-            )
+            ),
+            warning_text="Grafik bar tidak tersedia."
+        )
 
-            if fig_bar is not None:
-                st.plotly_chart(fig_bar, use_container_width=True)
-            else:
-                st.warning("Grafik bar tidak tersedia.")
-
-        st.divider()
-
-        st.subheader("Recommended Stocks Table")
+        section_header(
+            "Recommended Stocks Table",
+            "Daftar saham terpilih beserta bobot, alokasi dana, return, risiko, dan metrik pendukung."
+        )
 
         display_portfolio_df = select_portfolio_display_columns(weights_df)
         display_portfolio_df = format_portfolio_table(display_portfolio_df)
@@ -706,67 +667,90 @@ with tab_portfolio:
 
         st.divider()
 
-        st.subheader("Cumulative Portfolio Return")
+        # =========================================================
+        # 3. PORTFOLIO PERFORMANCE
+        # =========================================================
 
-        st.plotly_chart(
+        section_header(
+            "Portfolio Performance",
+            "Evaluasi performa portfolio berdasarkan return historis, risiko, dan rasio efisiensi."
+        )
+
+        col10, col11, col12, col13 = st.columns(4)
+
+        col10.metric(
+            "Annualized Return",
+            format_percent(selected_result["portfolio_annual_return"])
+        )
+
+        col11.metric(
+            "Annualized Volatility",
+            format_percent(selected_result["portfolio_annual_risk"])
+        )
+
+        col12.metric(
+            "Sharpe Ratio",
+            format_decimal(selected_result["sharpe_ratio"])
+        )
+
+        col13.metric(
+            "Selected Stocks",
+            selected_result.get("selected_stock_count", len(weights_df))
+        )
+
+        render_chart(
             plot_portfolio_cumulative_return(
                 selected_result["portfolio_daily_return"],
                 user_input["investment_amount"],
                 selected_result["method"]
+            )
+        )
+
+        render_chart(
+            plot_selected_portfolio_risk_return(
+                weights_df,
+                selected_result["method"]
             ),
-            use_container_width=True
+            warning_text="Data risk-return tidak tersedia untuk visualisasi ini."
         )
 
         st.divider()
 
-        st.subheader("Risk vs Return Saham dalam Portfolio")
+        # =========================================================
+        # 4. MODEL COMPARISON
+        # =========================================================
 
-        fig_selected_rr = plot_selected_portfolio_risk_return(
-            weights_df,
-            selected_result["method"]
+        section_header(
+            "Perbandingan 3 Model Portfolio",
+            "Membandingkan MVEP, SIM, dan CAPM berdasarkan return, risiko, Sharpe Ratio, beta, dan alpha."
         )
 
-        if fig_selected_rr is not None:
-            st.plotly_chart(fig_selected_rr, use_container_width=True)
-        else:
-            st.warning("Data risk-return tidak tersedia untuk visualisasi ini.")
+        col14, col15, col16 = st.columns(3)
 
-        st.divider()
-
-        st.subheader("Perbandingan 3 Model Portfolio")
-
-        best_sharpe_model = get_best_model_by_sharpe(comparison_df)
-        lowest_risk_model = get_lowest_risk_model(comparison_df)
-        highest_return_model = get_highest_return_model(comparison_df)
-
-        col15, col16, col17 = st.columns(3)
-
-        col15.metric("Best Sharpe Model", best_sharpe_model)
-        col16.metric("Lowest Risk Model", lowest_risk_model)
-        col17.metric("Highest Return Model", highest_return_model)
+        col14.metric("Best Sharpe Model", best_sharpe_model)
+        col15.metric("Lowest Risk Model", lowest_risk_model)
+        col16.metric("Highest Return Model", highest_return_model)
 
         st.dataframe(
             format_comparison_table(comparison_df),
             use_container_width=True
         )
 
-        st.plotly_chart(
-            plot_model_comparison(comparison_df),
-            use_container_width=True
+        render_chart(
+            plot_model_comparison(comparison_df)
         )
 
-        st.plotly_chart(
-            plot_model_return_risk_scatter(comparison_df),
-            use_container_width=True
+        render_chart(
+            plot_model_return_risk_scatter(comparison_df)
         )
 
-        fig_beta = plot_portfolio_beta_comparison(comparison_df)
-        if fig_beta is not None:
-            st.plotly_chart(fig_beta, use_container_width=True)
+        render_chart(
+            plot_portfolio_beta_comparison(comparison_df)
+        )
 
-        fig_alpha = plot_portfolio_alpha_comparison(comparison_df)
-        if fig_alpha is not None:
-            st.plotly_chart(fig_alpha, use_container_width=True)
+        render_chart(
+            plot_portfolio_alpha_comparison(comparison_df)
+        )
 
         portfolio_weight_comparison = all_model_result.get(
             "portfolio_weight_comparison"
@@ -774,20 +758,22 @@ with tab_portfolio:
 
         if portfolio_weight_comparison is not None:
 
-            st.subheader("Perbandingan Bobot Saham Tiap Model")
+            section_header(
+                "Perbandingan Bobot Saham Tiap Model",
+                "Melihat perbedaan komposisi bobot saham dari setiap metode portfolio."
+            )
 
             weight_model_choice = st.selectbox(
                 "Pilih model untuk melihat bobot portfolio",
                 ["MVEP", "SIM", "CAPM"]
             )
 
-            fig_weight = plot_portfolio_weight_comparison(
-                portfolio_weight_comparison,
-                weight_model_choice
+            render_chart(
+                plot_portfolio_weight_comparison(
+                    portfolio_weight_comparison,
+                    weight_model_choice
+                )
             )
-
-            if fig_weight is not None:
-                st.plotly_chart(fig_weight, use_container_width=True)
 
             with st.expander("Lihat Tabel Perbandingan Bobot"):
                 st.dataframe(
@@ -797,7 +783,14 @@ with tab_portfolio:
 
         st.divider()
 
-        st.subheader("AI Advisor / Portfolio Insight")
+        # =========================================================
+        # 5. AI ADVISOR
+        # =========================================================
+
+        section_header(
+            "AI Advisor / Portfolio Insight",
+            "Interpretasi sederhana dari hasil portfolio untuk membantu pengguna memahami risiko dan potensi return."
+        )
 
         advisor_text = generate_simple_advisor(
             selected_model=selected_result["method"],
@@ -808,3 +801,87 @@ with tab_portfolio:
         )
 
         st.info(advisor_text)
+
+        st.divider()
+
+        # =========================================================
+        # 6. TECHNICAL DETAILS
+        # =========================================================
+
+        section_header(
+            "Technical Details",
+            "Detail proses input, dynamic filtering, feature engineering, dan perhitungan model."
+        )
+
+        with st.expander("Input Summary"):
+            col17, col18, col19, col20 = st.columns(4)
+
+            col17.metric("Selected Model", user_input["model_choice"])
+            col18.metric("Target Index", user_input["index_choice"])
+            col19.metric("Capital", format_rupiah(user_input["investment_amount"]))
+            col20.metric("Trading Days", feature_summary["trading_days_used"])
+
+            st.write(
+                f"Periode analisis: **{user_input['start_date']}** sampai **{user_input['end_date']}**"
+            )
+
+        with st.expander("Dynamic Filtering Summary"):
+            col21, col22, col23, col24 = st.columns(4)
+
+            col21.metric("Initial Tickers", filtering_summary["initial_ticker_count"])
+            col22.metric("Available Tickers", filtering_summary["available_ticker_count"])
+            col23.metric("Valid Tickers", filtering_summary["valid_ticker_count"])
+            col24.metric("Removed Tickers", filtering_summary["removed_ticker_count"])
+
+            st.json(filtering_summary)
+
+        with st.expander("Feature Engineering Summary"):
+            col25, col26, col27, col28 = st.columns(4)
+
+            col25.metric("Initial Stocks", feature_summary["initial_ticker_count"])
+            col26.metric("Removed Negative Return", feature_summary["removed_negative_return_count"])
+            col27.metric("Final Stocks", feature_summary["final_ticker_count"])
+            col28.metric("Risk-Free Rate", format_percent(feature_summary["risk_free_rate_annual"]))
+
+            st.write("Saham yang dieliminasi karena return negatif:")
+            st.write(feature_summary["removed_negative_return_tickers"])
+
+        with st.expander(f"Detail Perhitungan Model {selected_result['method']}"):
+
+            if selected_result["method"] == "MVEP":
+                st.info(
+                    f"MVEP menggunakan 10 pasangan saham dengan korelasi terendah. "
+                    f"Jumlah saham terpilih: {selected_result.get('selected_stock_count', len(weights_df))}. "
+                    f"Bobot negatif tetap ditampilkan karena mengikuti hasil matematis MVEP."
+                )
+
+                if "top_low_corr_pairs" in selected_result:
+                    st.dataframe(
+                        selected_result["top_low_corr_pairs"],
+                        use_container_width=True
+                    )
+
+            elif selected_result["method"] == "SIM":
+                st.info(
+                    f"SIM menggunakan cut-off point C* = "
+                    f"{format_decimal(selected_result.get('C_star'))}. "
+                    f"Saham dipilih berdasarkan kriteria ERB > C*."
+                )
+
+                if "sim_calculation_table" in selected_result:
+                    st.dataframe(
+                        selected_result["sim_calculation_table"],
+                        use_container_width=True
+                    )
+
+            elif selected_result["method"] == "CAPM":
+                st.info(
+                    "CAPM menggunakan cut-off Top 10 saham berdasarkan bobot terbesar, "
+                    "lalu bobot dinormalisasi ulang agar total bobot = 1."
+                )
+
+                if "all_weights_before_cutoff" in selected_result:
+                    st.dataframe(
+                        selected_result["all_weights_before_cutoff"],
+                        use_container_width=True
+                    )
