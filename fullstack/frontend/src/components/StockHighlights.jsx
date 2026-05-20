@@ -56,17 +56,30 @@ function TrendIcon({ up, size = 10 }) {
 }
 
 async function fetchOne(s) {
-  const res  = await fetch(`/yahoo/v8/finance/chart/${s.code}?interval=1d&range=5d`);
-  const data = await res.json();
-  const meta   = data?.chart?.result?.[0]?.meta;
-  const quotes = data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? [];
-  const valid  = quotes.filter(c => c !== null && isFinite(Number(c)));
-  const cur    = safeNum(meta?.regularMarketPrice) ?? safeNum(valid.at(-1));
-  const mp     = safeNum(meta?.previousClose);
-  const prev   = mp && mp !== cur ? mp : safeNum(valid.at(-2));
-  return { label: s.label, name: s.name, price: cur, change: safeChange(cur, prev), error: false };
+  try {
+    // ⚡ MENGGUNAKAN ALLORIGINS PROXY UNTUK MENEMBUS CORS YAHOO FINANCE DI VERCEL ⚡
+    const yahooUrl = encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${s.code}?interval=1d&range=5d`);
+    const res = await fetch(`https://api.allorigins.win/get?url=${yahooUrl}`);
+    
+    if (!res.ok) throw new Error("Network response was not ok");
+    const wrapper = await res.json();
+    
+    // AllOrigins membungkus data asli dalam bentuk string di properti .contents
+    const data = JSON.parse(wrapper.contents);
+    
+    const meta   = data?.chart?.result?.[0]?.meta;
+    const quotes = data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? [];
+    const valid  = quotes.filter(c => c !== null && isFinite(Number(c)));
+    const cur    = safeNum(meta?.regularMarketPrice) ?? safeNum(valid.at(-1));
+    const mp     = safeNum(meta?.previousClose);
+    const prev   = mp && mp !== cur ? mp : safeNum(valid.at(-2));
+    
+    return { label: s.label, name: s.name, price: cur, change: safeChange(cur, prev), error: false };
+  } catch (err) {
+    console.error(`Gagal mengambil data Yahoo untuk ${s.label}:`, err);
+    return { label: s.label, name: s.name, price: null, change: null, error: true };
+  }
 }
-
 export default function StockHighlights({ onViewAll }) {
   const [index, setIndex]         = useState("IDX30"); // "LQ45" | "IDX30"
   const [stocks, setStocks]       = useState([]);
