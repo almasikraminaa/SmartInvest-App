@@ -27,7 +27,10 @@ const IDX30 = [
   { code: "MDKA.JK", label: "MDKA", name: "Merdeka Copper Gold" },
 ];
 
-function safeNum(v) { const n = Number(v); return isFinite(n) && n > 0 ? n : null; }
+function safeNum(v) {
+  const n = Number(v);
+  return isFinite(n) && n > 0 ? n : null;
+}
 
 function safeChange(cur, prev) {
   if (!cur || !prev) return null;
@@ -36,8 +39,10 @@ function safeChange(cur, prev) {
 
 function Avatar({ code, up }) {
   return (
-    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0
-      ${up ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-500"}`}>
+    <div
+      className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0
+      ${up ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-500"}`}
+    >
       {code[0]}
     </div>
   );
@@ -45,45 +50,69 @@ function Avatar({ code, up }) {
 
 function TrendIcon({ up, size = 10 }) {
   return up ? (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+    >
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+      <polyline points="17 6 23 6 23 12" />
     </svg>
   ) : (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-      <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+    >
+      <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
+      <polyline points="17 18 23 18 23 12" />
     </svg>
   );
 }
 
 async function fetchOne(s) {
   try {
-    // ⚡ MENGGUNAKAN ALLORIGINS PROXY UNTUK MENEMBUS CORS YAHOO FINANCE DI VERCEL ⚡
-    const yahooUrl = encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${s.code}?interval=1d&range=5d`);
-    const res = await fetch(`https://api.allorigins.win/get?url=${yahooUrl}`);
-    
-    if (!res.ok) throw new Error("Network response was not ok");
-    const wrapper = await res.json();
-    
-    // AllOrigins membungkus data asli dalam bentuk string di properti .contents
-    const data = JSON.parse(wrapper.contents);
-    
-    const meta   = data?.chart?.result?.[0]?.meta;
+    const res = await fetch(
+      `/api/yahoo/v8/finance/chart/${s.code}?interval=1d&range=5d`,
+    );
+    const data = await res.json();
+
+    const meta = data?.chart?.result?.[0]?.meta;
     const quotes = data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? [];
-    const valid  = quotes.filter(c => c !== null && isFinite(Number(c)));
-    const cur    = safeNum(meta?.regularMarketPrice) ?? safeNum(valid.at(-1));
-    const mp     = safeNum(meta?.previousClose);
-    const prev   = mp && mp !== cur ? mp : safeNum(valid.at(-2));
-    
-    return { label: s.label, name: s.name, price: cur, change: safeChange(cur, prev), error: false };
+    const valid = quotes.filter((c) => c !== null && isFinite(Number(c)));
+    const cur = safeNum(meta?.regularMarketPrice) ?? safeNum(valid.at(-1));
+    const mp = safeNum(meta?.previousClose);
+    const prev = mp && mp !== cur ? mp : safeNum(valid.at(-2));
+
+    return {
+      label: s.label,
+      name: s.name,
+      price: cur,
+      change: safeChange(cur, prev),
+      error: false,
+    };
   } catch (err) {
     console.error(`Gagal mengambil data Yahoo untuk ${s.label}:`, err);
-    return { label: s.label, name: s.name, price: null, change: null, error: true };
+    return {
+      label: s.label,
+      name: s.name,
+      price: null,
+      change: null,
+      error: true,
+    };
   }
 }
+
 export default function StockHighlights({ onViewAll }) {
-  const [index, setIndex]         = useState("IDX30"); // "LQ45" | "IDX30"
-  const [stocks, setStocks]       = useState([]);
-  const [loading, setLoading]     = useState(true);
+  const [index, setIndex] = useState("IDX30");
+  const [stocks, setStocks] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
 
   useEffect(() => {
@@ -96,10 +125,21 @@ export default function StockHighlights({ onViewAll }) {
         settled.map((r, i) =>
           r.status === "fulfilled"
             ? r.value
-            : { label: list[i].label, name: list[i].name, price: null, change: null, error: true }
-        )
+            : {
+                label: list[i].label,
+                name: list[i].name,
+                price: null,
+                change: null,
+                error: true,
+              },
+        ),
       );
-      setLastUpdated(new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }));
+      setLastUpdated(
+        new Date().toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      );
       setLoading(false);
     };
 
@@ -113,16 +153,24 @@ export default function StockHighlights({ onViewAll }) {
       {/* Header */}
       <div className="flex justify-between items-center mb-1">
         <div className="flex gap-1">
-          {["IDX30", "LQ45"].map(idx => (
-            <button key={idx} onClick={() => setIndex(idx)}
+          {["IDX30", "LQ45"].map((idx) => (
+            <button
+              key={idx}
+              onClick={() => setIndex(idx)}
               className={`text-xs px-3 py-1 rounded-lg font-bold transition-colors ${
-                index === idx ? "bg-smart-navy text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-              }`}>
+                index === idx
+                  ? "bg-smart-navy text-white"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}
+            >
               {idx}
             </button>
           ))}
         </div>
-        <button onClick={onViewAll} className="text-xs text-blue-500 font-semibold hover:underline">
+        <button
+          onClick={onViewAll}
+          className="text-xs text-blue-500 font-semibold hover:underline"
+        >
           View All
         </button>
       </div>
@@ -145,14 +193,18 @@ export default function StockHighlights({ onViewAll }) {
                 </div>
               </div>
             ))
-          : stocks.map(stock => {
+          : stocks.map((stock) => {
               const up = (stock.change ?? 0) >= 0;
               return (
                 <div key={stock.label} className="flex items-center gap-3">
                   <Avatar code={stock.label} up={!stock.error && up} />
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-800 text-sm">{stock.label}</p>
-                    <p className="text-gray-400 text-xs truncate">{stock.name}</p>
+                    <p className="font-bold text-gray-800 text-sm">
+                      {stock.label}
+                    </p>
+                    <p className="text-gray-400 text-xs truncate">
+                      {stock.name}
+                    </p>
                   </div>
                   <div className="text-right">
                     {stock.error || stock.price === null ? (
@@ -162,9 +214,12 @@ export default function StockHighlights({ onViewAll }) {
                         <p className="font-semibold text-gray-800 text-sm tabular-nums">
                           Rp {stock.price.toLocaleString("id-ID")}
                         </p>
-                        <p className={`text-xs font-semibold flex items-center justify-end gap-0.5 ${up ? "text-emerald-600" : "text-red-500"}`}>
+                        <p
+                          className={`text-xs font-semibold flex items-center justify-end gap-0.5 ${up ? "text-emerald-600" : "text-red-500"}`}
+                        >
                           <TrendIcon up={up} />
-                          {up ? "+" : ""}{stock.change ?? 0}%
+                          {up ? "+" : ""}
+                          {stock.change ?? 0}%
                         </p>
                       </>
                     )}

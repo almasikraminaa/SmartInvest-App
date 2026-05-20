@@ -6,11 +6,11 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
-      "/yahoo": {
+      "/api/yahoo": {
         target: "https://query2.finance.yahoo.com",
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path.replace(/^\/yahoo/, ""),
+        rewrite: (path) => path.replace(/^\/api\/yahoo/, ""),
       },
     },
   },

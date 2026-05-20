@@ -69,14 +69,11 @@ function safeChange(cur, prev) {
 // ⚡ PERBAIKAN: Fungsi fetch untuk menarik data OHLC lengkap via AllOrigins ⚡
 async function fetchStockData(s) {
   try {
-    const yahooUrl = encodeURIComponent(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${s.code}?interval=5m&range=1d`,
+    // ⚡ FIX: Langsung masukkan parameter objek s.code ke dalam query URL proxy
+    const res = await fetch(
+      `/api/yahoo/v8/finance/chart/${encodeURIComponent(s.code)}?interval=5m&range=1d`,
     );
-    const res = await fetch(`https://api.allorigins.win/get?url=${yahooUrl}`);
-
-    if (!res.ok) throw new Error("Network response was not ok");
-    const wrapper = await res.json();
-    const data = JSON.parse(wrapper.contents);
+    const data = await res.json();
 
     const result = data?.chart?.result?.[0];
     const meta = result?.meta;

@@ -368,13 +368,11 @@ function TrendIcon({ up, size = 10 }) {
 
 async function fetchOne(s) {
   try {
-    // ⚡ BYPASS PROXY: Pembungkusan AllOrigins CORS Bypass untuk list data saham ⚡
-    const targetUrl = encodeURIComponent(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${s.code}?interval=1d&range=5d`,
+    // ⚡ FIX: Langsung fetch ke proxy internal Vercel kamu tanpa membungkus targetUrl terpisah
+    const res = await fetch(
+      `/api/yahoo/v8/finance/chart/${encodeURIComponent(s.code)}?interval=1d&range=5d`,
     );
-    const res = await fetch(`https://api.allorigins.win/get?url=${targetUrl}`);
-    const wrap = await res.json();
-    const data = JSON.parse(wrap.contents);
+    const data = await res.json();
 
     const meta = data?.chart?.result?.[0]?.meta;
     const quotes =
@@ -384,9 +382,20 @@ async function fetchOne(s) {
     const mp = safeNum(meta?.previousClose);
     const prev = mp && mp !== cur ? mp : safeNum(valid.at(-2));
 
-    return { ...s, price: cur, change: safeChange(cur, prev), error: false };
-  } catch {
-    return { ...s, price: null, change: null, error: true };
+    return {
+      ...s,
+      price: cur,
+      change: safeChange(cur, prev),
+      error: false,
+    };
+  } catch (err) {
+    console.error(`Gagal mengambil data Yahoo untuk ${s.label}:`, err);
+    return {
+      ...s,
+      price: null,
+      change: null,
+      error: true,
+    };
   }
 }
 
