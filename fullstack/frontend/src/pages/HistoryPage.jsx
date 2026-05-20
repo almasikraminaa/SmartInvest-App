@@ -18,17 +18,7 @@ export default function HistoryPage() {
   // Filter states
   const [filterIndex, setFilterIndex] = useState('');
   const [filterMethod, setFilterMethod] = useState('');
-  const [filterTimeRange, setFilterTimeRange] = useState('');
-  const [filterDateStart, setFilterDateStart] = useState('');
-  const [filterDateEnd, setFilterDateEnd] = useState('');
   const [filterCapital, setFilterCapital] = useState('');
-  const [filterCapitalMin, setFilterCapitalMin] = useState('');
-  const [filterCapitalMax, setFilterCapitalMax] = useState('');
-  const [sortBy, setSortBy] = useState('');
-
-  useEffect(() => {
-    fetchHistory();
-  }, []);
 
   const fetchHistory = async () => {
     setIsLoading(true);
@@ -56,7 +46,6 @@ export default function HistoryPage() {
         capital: Number(item.capital || 0),
         return: item.expected_return,
         risk: item.risk,
-        // ⚡ MEMBACA KOLOM BARU DARI SUPABASE SECARA AKURAT ⚡
         bi_rate: item.bi_rate != null ? item.bi_rate : 5.8,
         sharpe: item.sharpe_ratio,
         sentiment: item.market_sentiment || 'Sideways'
@@ -71,6 +60,10 @@ export default function HistoryPage() {
     }
   };
 
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
   // Close filter panel on outside click
   useEffect(() => {
     function handleClickOutside(e) {
@@ -80,17 +73,10 @@ export default function HistoryPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showFilterPanel]);
 
+  // Reset page ke 1 jika ada parameter pencarian atau filter yang berubah
   useEffect(() => { 
     setCurrentPage(1); 
-  }, [searchQuery, filterIndex, filterMethod, filterTimeRange, filterDateStart, filterDateEnd, filterCapital, filterCapitalMin, filterCapitalMax, sortBy]);
-
-  const getDateThreshold = (range) => {
-    const now = new Date();
-    if (range === 'today') return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    if (range === '7days') { const d = new Date(); d.setDate(d.getDate() - 7); return d; }
-    if (range === '30days') { const d = new Date(); d.setDate(d.getDate() - 30); return d; }
-    return null;
-  };
+  }, [searchQuery, filterIndex, filterMethod, filterCapital]);
 
   const filteredData = historyData
     .filter((item) => {
@@ -100,33 +86,27 @@ export default function HistoryPage() {
         item.analysisId.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesIndex = filterIndex === '' || item.target === filterIndex;
       const matchesMethod = filterMethod === '' || item.method === filterMethod;
-      
-      let matchesTime = true;
-      if (filterTimeRange === 'custom') {
-        if (filterDateStart) matchesTime = matchesTime && item.date >= filterDateStart;
-        if (filterDateEnd) matchesTime = matchesTime && item.date <= filterDateEnd;
-      } else if (filterTimeRange) {
-        const threshold = getDateThreshold(filterTimeRange);
-        if (threshold) matchesTime = new Date(item.date) >= threshold;
-      }
 
       let matchesCapital = true;
       if (filterCapital === 'micro') matchesCapital = item.capital < 5000000;
       else if (filterCapital === 'medium') matchesCapital = item.capital >= 5000000 && item.capital <= 25000000;
       else if (filterCapital === 'large') matchesCapital = item.capital > 25000000;
-      return matchesSearch && matchesIndex && matchesMethod && matchesTime && matchesCapital;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'return-desc') return parseFloat(b.return) - parseFloat(a.return);
-      if (sortBy === 'risk-asc') return parseFloat(a.risk) - parseFloat(b.risk);
-      return new Date(b.date) - new Date(a.date);
+      
+      return matchesSearch && matchesIndex && matchesMethod && matchesCapital;
     });
 
   const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
   const paginatedData = filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const handleSelectAll = (e) => { if (e.target.checked) setSelectedRows(paginatedData.map(i => i.id)); else setSelectedRows([]); };
-  const handleSelectRow = (id) => { if (selectedRows.includes(id)) setSelectedRows(selectedRows.filter(r => r !== id)); else setSelectedRows([...selectedRows, id]); };
+  const handleSelectAll = (e) => { 
+    if (e.target.checked) setSelectedRows(paginatedData.map(i => i.id)); 
+    else setSelectedRows([]); 
+  };
+  
+  const handleSelectRow = (id) => { 
+    if (selectedRows.includes(id)) setSelectedRows(selectedRows.filter(r => r !== id)); 
+    else setSelectedRows([...selectedRows, id]); 
+  };
 
   const handleDeleteConfirm = async () => {
     try {
@@ -147,12 +127,13 @@ export default function HistoryPage() {
     if (Math.abs(val) > 1) return Number(val).toFixed(2) + "%";
     return (val * 100).toFixed(2) + "%";
   };
+  
   const fmtNum = (val) => (val != null ? Number(val).toFixed(2) : "N/A");
   const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('id-ID', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   const formatCurrency = (num) => 'Rp ' + num.toLocaleString('id-ID');
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 min-h-[85vh] overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm p-6 min-h-[85vh] overflow-hidden flex flex-col justify-between">
       {isLoading ? (
         <div className="min-h-[50vh] flex items-center justify-center">
           <svg className="animate-spin h-7 w-7 text-smart-navy" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -161,7 +142,7 @@ export default function HistoryPage() {
           </svg>
         </div>
       ) : (
-        <div className="flex flex-col gap-6 pb-10 w-full">
+        <div className="flex flex-col gap-6 w-full flex-1">
           <div>
             <h1 className="text-2xl font-bold text-smart-navy mb-2">Analysis History</h1>
             <p className="text-gray-500 text-sm font-medium">Review and track your previous portfolio optimizations</p>
@@ -188,7 +169,8 @@ export default function HistoryPage() {
               
               <div className="relative" ref={filterRef}>
                 <button onClick={() => setShowFilterPanel(!showFilterPanel)} className="bg-white border border-gray-200 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 text-gray-600 transition-colors flex items-center gap-2 shadow-sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                  {/* ⚡ FIX: Perbaikan Tag SVG Self-Closing Polygon di bawah ini ⚡ */}
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
                   Filter Panel
                 </button>
                 {showFilterPanel && (
@@ -209,6 +191,14 @@ export default function HistoryPage() {
                         ))}
                       </div>
                     </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">Skala Dana</p>
+                      <div className="flex flex-wrap gap-2">
+                        {[{v:'',l:'Semua'}, {v:'micro',l:'< 5Juta'}, {v:'medium',l:'5-25 Juta'}, {v:'large',l:'> 25 Juta'}].map((t) => (
+                          <button key={t.v} onClick={() => setFilterCapital(t.v)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${filterCapital === t.v ? 'bg-smart-navy text-white' : 'bg-gray-100 text-gray-600'}`}>{t.l}</button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -218,7 +208,7 @@ export default function HistoryPage() {
           {selectedRows.length > 0 && <div className="text-xs text-smart-navy font-bold bg-blue-50 px-4 py-2 rounded-xl self-start">{selectedRows.length} item dipilih</div>}
 
           {/* Table Element */}
-          <div className="rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="rounded-2xl shadow-sm border border-gray-100 overflow-hidden bg-white">
             <div className="w-full overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap min-w-[1050px]">
                 <thead className="bg-gray-50/80 text-gray-500 uppercase text-xs font-semibold border-b border-gray-100">
@@ -231,7 +221,6 @@ export default function HistoryPage() {
                     <th className="px-6 py-4">Modal Kerja</th>
                     <th className="px-6 py-4">Expected Return</th>
                     <th className="px-6 py-4">Risk</th>
-                    {/* BERIKUT ADALAH KOLOM DINAMIS TERBARU */}
                     <th className="px-6 py-4">Sharpe Ratio</th>
                     <th className="px-6 py-4">BI Rate</th>
                     <th className="px-6 py-4">Sentiment</th>
@@ -249,7 +238,6 @@ export default function HistoryPage() {
                         <td className="px-6 py-4 font-semibold">{isPrivate ? <span className="text-gray-300">Rp •••••••</span> : formatCurrency(item.capital)}</td>
                         <td className="px-6 py-4 font-bold text-emerald-600">{fmtPersen(item.return)}</td>
                         <td className="px-6 py-4 font-bold text-rose-500">{fmtPersen(item.risk)}</td>
-                        {/* RENDERING DATA DARI KOLOM BARU */}
                         <td className="px-6 py-4 text-gray-700 font-bold">{fmtNum(item.sharpe)}</td>
                         <td className="px-6 py-4 text-gray-400 font-bold">{item.bi_rate}%</td>
                         <td className="px-6 py-4">
@@ -268,6 +256,29 @@ export default function HistoryPage() {
               </table>
             </div>
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-gray-100 pt-4 px-2">
+              <span className="text-xs font-semibold text-gray-400">Halaman {currentPage} dari {totalPages}</span>
+              <div className="flex gap-2">
+                <button 
+                  disabled={currentPage === 1} 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
+                  className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-gray-100 transition-colors"
+                >
+                  Sebelumnya
+                </button>
+                <button 
+                  disabled={currentPage === totalPages} 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
+                  className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-gray-100 transition-colors"
+                >
+                  Selanjutnya
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
