@@ -67,7 +67,67 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
           </p>
         </div>
       </div>
-
+{/**
+ 
+              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+                  Estimasi 1 Tahun Dana
+                </h3>
+                <div className="flex flex-col gap-3">
+                  <div className="flex justify-between items-center bg-emerald-50/30 p-2.5 rounded-xl border border-emerald-100/50">
+                    <span className="text-xs font-medium text-gray-500">
+                      Potensi Naik
+                    </span>
+                    <span className="text-sm font-bold text-smart-green">
+                      +{fmtRupiah(iData?.investment_simulation?.potential_gain)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center bg-rose-50/30 p-2.5 rounded-xl border border-rose-100/50">
+                    <span className="text-xs font-medium text-gray-500">
+                      Potensi Turun
+                    </span>
+                    <span className="text-sm font-bold text-rose-500">
+                      -{fmtRupiah(iData?.investment_simulation?.potential_loss)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <div className="bg-emerald-50/40 border border-emerald-100/60 rounded-xl p-3.5 text-center flex flex-col justify-center">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                    Expected Return
+                  </p>
+                  <p className="text-xl font-black text-smart-green">
+                    {fmtPersen(activeReturn)}
+                  </p>
+                </div>
+                <div className="bg-rose-50/40 border border-rose-100/60 rounded-xl p-3.5 text-center flex flex-col justify-center">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                    Risiko Tahunan
+                  </p>
+                  <p className="text-xl font-black text-rose-500">
+                    {fmtPersen(activeRisk)}
+                  </p>
+                </div>
+                <div className="bg-gray-50 border border-gray-100 rounded-xl p-3.5 text-center flex flex-col justify-center">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                    Sharpe Ratio
+                  </p>
+                  <p className="text-xl font-black text-smart-navy">
+                    {fmtNum(activeSharpe)}
+                  </p>
+                </div>
+                <div className="bg-blue-50/40 border border-blue-100/50 rounded-xl p-3.5 text-center flex flex-col justify-center">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
+                    Simulasi Dana
+                  </p>
+                  <p className="text-xs font-bold text-blue-600 truncate">
+                    {fmtRupiah(initialAmount)}
+                  </p>
+                </div>
+              </div>
+ */}
       {/* Kontainer 1: Grid Metrik Utama (4 Kolom) */}
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
