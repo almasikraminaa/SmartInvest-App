@@ -785,14 +785,24 @@ export default function MarketChart() {
       const res = await fetch(
         `/api/yahoo/v8/finance/chart/%5EJKSE?interval=${tf.interval}&range=${tf.range}`,
       );
+      if (!res.ok) {
+        const message = await res.text();
+        throw new Error(`Yahoo proxy fetch failed: ${res.status} ${res.statusText} - ${message}`);
+      }
       const data = await res.json();
 
       const result = data?.chart?.result?.[0];
       const meta = result?.meta;
       const q = result?.indicators?.quote?.[0];
-      const ts = result?.timestamp;
+      const ts = Array.isArray(result?.timestamp) ? result.timestamp : null;
 
-      if (!ts) throw new Error("No timestamp data");
+      if (!ts || ts.length === 0) {
+        const errorPayload = data?.chart?.error || data;
+        throw new Error(`No timestamp data: ${JSON.stringify(errorPayload)}`);
+      }
+      if (!q) {
+        throw new Error(`No quote data returned from Yahoo API`);
+      }
 
       const pts = filterSeries(
         ts,
@@ -861,6 +871,7 @@ export default function MarketChart() {
             const res = await fetch(
               `/api/yahoo/v8/finance/chart/%5EJKSE?interval=${r.interval}&range=${r.range}`,
             );
+            if (!res.ok) return;
             const data = await res.json();
 
             const result = data?.chart?.result?.[0];
@@ -902,10 +913,14 @@ export default function MarketChart() {
       const res = await fetch(
         `/api/yahoo/v8/finance/chart/%5EJKSE?interval=1d&range=3mo`,
       );
+      if (!res.ok) {
+        setDiary([]);
+        return;
+      }
       const data = await res.json();
 
       const result = data?.chart?.result?.[0];
-      const ts = result?.timestamp ?? [];
+      const ts = Array.isArray(result?.timestamp) ? result.timestamp : [];
       const closes = result?.indicators?.quote?.[0]?.close ?? [];
       const entries = [];
 
