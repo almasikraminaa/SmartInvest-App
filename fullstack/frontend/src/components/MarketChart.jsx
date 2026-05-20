@@ -134,8 +134,8 @@ function LineChart({ series, loading, isPositive, range }) {
   const svgRef = useRef(null);
 
   const is1D = range === "1d";
-  const W = 520,
-    H = 190;
+  const W = 700,
+    H = 220;
   const padL = 64,
     padB = 28,
     padT = 14,
@@ -251,7 +251,7 @@ function LineChart({ series, loading, isPositive, range }) {
       ref={svgRef}
       viewBox={`0 0 ${W} ${H}`}
       className="w-full cursor-crosshair"
-      style={{ height: H }}
+      style={{ maxHeight: 240 }}
       onMouseMove={onMove}
       onMouseLeave={() => setHoverIdx(null)}
     >
