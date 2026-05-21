@@ -48,12 +48,45 @@ def run_mvep(
 ):
     log_return_matrix = feature_result["log_return_matrix"]
     covariance_matrix = feature_result["covariance_matrix"]
+    correlation_matrix = feature_result["correlation_matrix"]
     stock_summary = feature_result["stock_summary"]
     annual_risk_free_rate = feature_result["annual_risk_free_rate"]
 
-    tickers = log_return_matrix.columns.tolist()
+    # Ambil 10 pasangan saham dengan korelasi terendah
+    corr_matrix_mvep = correlation_matrix.copy()
+    corr_matrix_mvep.index.name = None
+    corr_matrix_mvep.columns.name = None
 
-    cov_matrix = covariance_matrix.values
+    corr_pairs_mvep = corr_matrix_mvep.stack().reset_index()
+    corr_pairs_mvep.columns = ["Ticker_1", "Ticker_2", "Correlation"]
+
+    # Hilangkan korelasi diri sendiri
+    corr_pairs_mvep = corr_pairs_mvep[
+        corr_pairs_mvep["Ticker_1"] != corr_pairs_mvep["Ticker_2"]
+    ]
+
+    # Hilangkan duplikasi pasangan A-B dan B-A
+    corr_pairs_mvep["pair"] = corr_pairs_mvep.apply(
+        lambda x: tuple(sorted([x["Ticker_1"], x["Ticker_2"]])),
+        axis=1
+    )
+    corr_pairs_mvep = corr_pairs_mvep.drop_duplicates("pair").drop(columns="pair")
+
+    top_low_corr_pairs_mvep = corr_pairs_mvep.sort_values(
+        by="Correlation",
+        ascending=True
+    ).head(10)
+
+    # Ambil unique ticker dari 10 pasangan korelasi terendah
+    tickers = sorted(
+        list(
+            set(top_low_corr_pairs_mvep["Ticker_1"])
+            .union(set(top_low_corr_pairs_mvep["Ticker_2"]))
+        )
+    )
+
+    cov_matrix = covariance_matrix.loc[tickers, tickers].values
+    selected_log_return = log_return_matrix[tickers]
 
     inv_cov_matrix = np.linalg.pinv(cov_matrix)
 
@@ -63,7 +96,7 @@ def run_mvep(
 
     performance = calculate_portfolio_performance(
         weights=weights,
-        log_return_matrix=log_return_matrix,
+        log_return_matrix=selected_log_return,
         annual_risk_free_rate=annual_risk_free_rate,
         trading_days=trading_days
     )
@@ -110,15 +143,15 @@ def run_sim(
     alpha_series = feature_result["alpha_series"]
     stock_summary = feature_result["stock_summary"]
     annual_risk_free_rate = feature_result["annual_risk_free_rate"]
-    daily_risk_free_rate = feature_result["daily_risk_free_rate"]
 
     tickers = log_return_matrix.columns.tolist()
 
-    mean_daily_return = log_return_matrix.mean()
+    # Menggunakan expected return tahunan dan variance tahunan untuk menyamakan skala c_star dengan DS notebook
+    mean_annual_return = log_return_matrix.mean() * trading_days
 
-    market_variance = market_log_return.var()
+    market_variance_annual = market_log_return.var() * trading_days
 
-    residual_variance = {}
+    residual_variance_annual = {}
 
     for ticker in tickers:
         expected_stock_return = (
@@ -128,23 +161,23 @@ def run_sim(
 
         residual = log_return_matrix[ticker] - expected_stock_return
 
-        residual_variance[ticker] = residual.var()
+        residual_variance_annual[ticker] = residual.var() * trading_days
 
-    residual_variance = pd.Series(
-        residual_variance,
+    residual_variance_annual = pd.Series(
+        residual_variance_annual,
         name="residual_variance"
     )
 
     sim_df = pd.DataFrame({
         "Ticker": tickers,
-        "mean_daily_return": mean_daily_return,
+        "mean_annual_return": mean_annual_return,
         "beta": beta_series,
         "alpha": alpha_series,
-        "residual_variance": residual_variance
+        "residual_variance": residual_variance_annual
     })
 
     sim_df["excess_return"] = (
-        sim_df["mean_daily_return"] - daily_risk_free_rate
+        sim_df["mean_annual_return"] - annual_risk_free_rate
     )
 
     sim_df["ERB"] = sim_df["excess_return"] / sim_df["beta"]
@@ -172,9 +205,9 @@ def run_sim(
     sim_df["cum_B"] = sim_df["B_i"].cumsum()
 
     sim_df["C_i"] = (
-        market_variance * sim_df["cum_A"]
+        market_variance_annual * sim_df["cum_A"]
     ) / (
-        1 + market_variance * sim_df["cum_B"]
+        1 + market_variance_annual * sim_df["cum_B"]
     )
 
     eligible_df = sim_df[sim_df["ERB"] > sim_df["C_i"]].copy()
@@ -273,13 +306,31 @@ def run_capm(
     raw_weights = inv_cov_matrix @ excess_return.values
 
     if raw_weights.sum() == 0:
-        weights = np.ones(len(tickers)) / len(tickers)
+        initial_weights = np.ones(len(tickers)) / len(tickers)
     else:
-        weights = raw_weights / raw_weights.sum()
+        initial_weights = raw_weights / raw_weights.sum()
+
+    # Urutkan berdasarkan bobot secara descending, ambil Top 10
+    initial_weights_series = pd.Series(initial_weights, index=tickers)
+    top_weights_series = (
+        initial_weights_series
+        .sort_values(ascending=False)
+        .head(10)
+    )
+
+    # Normalisasi ulang bobot Top 10 agar jumlahnya tepat 1.0 (100%)
+    if top_weights_series.sum() != 0:
+        weights = (top_weights_series / top_weights_series.sum()).values
+    else:
+        weights = np.ones(len(top_weights_series)) / len(top_weights_series)
+
+    tickers = top_weights_series.index.tolist()
+    selected_log_return = log_return_matrix[tickers]
+    expected_return = expected_return.reindex(tickers)
 
     performance = calculate_portfolio_performance(
         weights=weights,
-        log_return_matrix=log_return_matrix,
+        log_return_matrix=selected_log_return,
         annual_risk_free_rate=annual_risk_free_rate,
         trading_days=trading_days
     )
