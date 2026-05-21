@@ -179,6 +179,20 @@ def feature_engineering(
     log_return_matrix = log_return_matrix.loc[market_log_return.index]
 
     # ==============================
+    # FILTER MEAN LOG RETURN >= 0
+    # ==============================
+    mean_log_return_initial = log_return_matrix.mean()
+    positive_return_tickers = mean_log_return_initial[
+        mean_log_return_initial >= 0
+    ].index.tolist()
+
+    # Fallback jika kondisi pasar ekstrem menyebabkan seluruh return saham bernilai negatif
+    if len(positive_return_tickers) == 0:
+        positive_return_tickers = mean_log_return_initial.nlargest(5).index.tolist()
+
+    log_return_matrix = log_return_matrix[positive_return_tickers]
+
+    # ==============================
     # RISK FREE RATE
     # ==============================
 

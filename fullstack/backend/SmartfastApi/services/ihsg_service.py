@@ -472,8 +472,11 @@ def predict_ihsg_with_portfolio(
     alpha_avg = round(sum(alpha_values) / len(alpha_values), 4) if alpha_values else None
     beta_avg = round(sum(beta_values) / len(beta_values), 4) if beta_values else None
 
+    # Mengambil risk-free rate dinamis dari data BI rate
+    risk_free_rate_pct = float(feature_result["annual_risk_free_rate"] * 100)
+
     if beta_avg is not None and beta_avg != 0:
-        treynor_ratio = round((annual_return_pct - 5) / beta_avg, 4)
+        treynor_ratio = round((annual_return_pct - risk_free_rate_pct) / beta_avg, 4)
     else:
         treynor_ratio = None
 
@@ -501,7 +504,7 @@ def predict_ihsg_with_portfolio(
     # 13. CONSTRUCT OUTPUT JSON
     # ==========================
     trading_days = filtered_result["filtering_summary"]["trading_days_used"]
-    bi_rate_pct = round(float(feature_result["annual_risk_free_rate"] * 100), 1)
+    bi_rate_pct = round(risk_free_rate_pct, 3)
 
     portfolio_allocation = []
     for item in portfolio:
