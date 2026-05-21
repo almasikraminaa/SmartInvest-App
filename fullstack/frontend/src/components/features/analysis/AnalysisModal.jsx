@@ -9,7 +9,6 @@ const METHODS = [
   { value: 'MVEP', label: 'MVEP (Minimum Variance)' },
   { value: 'SIM', label: 'SIM (Single Index Model)' },
   { value: 'CAPM', label: 'CAPM (Capital Asset Pricing)' },
-  { value: 'ALL', label: 'ALL (Bandingkan Semua)' },
 ];
 
 const TARGET_INDICES = [
@@ -64,6 +63,19 @@ export default function AnalysisModal({ isOpen, onClose, onAnalysisComplete, pre
     if (!formData.index_choice) localErrors.index_choice = "Indeks wajib dipilih";
     if (!formData.start_date) localErrors.start_date = "Tanggal mulai wajib diisi";
     if (!formData.end_date) localErrors.end_date = "Tanggal akhir wajib diisi";
+    if (formData.start_date && formData.end_date) {
+      const start = new Date(formData.start_date);
+      const end = new Date(formData.end_date);
+      if (end <= start) {
+        localErrors.end_date = "Tanggal akhir harus setelah tanggal mulai";
+      } else {
+        const diffMs = end - start;
+        const diffYears = diffMs / (1000 * 60 * 60 * 24 * 365.25);
+        if (diffYears > 5) {
+          localErrors.start_date = "Periode maksimal 5 tahun";
+        }
+      }
+    }
     if (!formData.investment_amount || formData.investment_amount <= 0) {
       localErrors.investment_amount = "Jumlah investasi harus lebih dari 0";
     }

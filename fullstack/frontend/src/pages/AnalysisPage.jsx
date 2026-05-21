@@ -10,24 +10,6 @@ export default function AnalysisPage({
   const pData = result?.portfolio_data;
   const iData = result?.ihsg_data;
 
-  // Mencari object di method_comparison yang metodenya cocok dengan pilihan di modal
-  const selectedMethodMetrics = iData?.method_comparison?.find(
-    (m) => m.method === metaForm?.model_choice,
-  );
-
-  // Mengambil angka metrik berdasarkan model pilihan dari predict-ihsg (iData)
-  const activeReturn = selectedMethodMetrics
-    ? selectedMethodMetrics.return
-    : iData?.best_method_metrics?.expected_return;
-
-  const activeRisk = selectedMethodMetrics
-    ? selectedMethodMetrics.risk
-    : iData?.best_method_metrics?.annual_risk;
-
-  const activeSharpe = selectedMethodMetrics
-    ? selectedMethodMetrics.sharpe
-    : iData?.best_method_metrics?.sharpe_ratio;
-
   // Helper format persen pintar
   const fmtPersen = (val) => {
     if (val == null) return "N/A";
@@ -35,9 +17,85 @@ export default function AnalysisPage({
     return (val * 100).toFixed(2) + "%";
   };
 
-  const fmtNum = (val) => (val != null ? Number(val).toFixed(2) : "N/A");
   const fmtRupiah = (val) =>
     val != null ? "Rp " + Number(val).toLocaleString("id-ID") : "Rp 0";
+
+  // Helper: Parse GenAI text into styled sections
+  const renderGenAISections = (text) => {
+    if (!text) return null;
+    const lines = text.split('\n');
+    const sections = [];
+    let currentSection = { lines: [] };
+
+    lines.forEach((line) => {
+      const trimmed = line.trim();
+      // Detect section headers (lines with emoji at start + bold-like text)
+      if (
+        (trimmed.match(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u) && trimmed.length > 3 && !trimmed.startsWith('👉') && !trimmed.startsWith('⚠️')) ||
+        trimmed.startsWith('## ') ||
+        trimmed.startsWith('**') && trimmed.endsWith('**')
+      ) {
+        if (currentSection.lines.length > 0) {
+          sections.push(currentSection);
+        }
+        currentSection = { header: trimmed.replace(/^##\s*/, '').replace(/\*\*/g, ''), lines: [] };
+      } else if (trimmed.length > 0) {
+        currentSection.lines.push(trimmed);
+      }
+    });
+    if (currentSection.lines.length > 0 || currentSection.header) {
+      sections.push(currentSection);
+    }
+
+    return sections.map((section, idx) => {
+      const isTips = section.lines.some(l => l.startsWith('👉'));
+      const isWarning = section.lines.some(l => l.startsWith('⚠️'));
+
+      return (
+        <div key={idx} className={`rounded-xl p-4 ${
+          isWarning ? 'bg-amber-50/60 border border-amber-200/50' :
+          isTips ? 'bg-emerald-50/40 border border-emerald-100/60' :
+          idx === 0 ? 'bg-gradient-to-r from-blue-50/60 to-indigo-50/40 border border-blue-100/50' :
+          'bg-gray-50/50 border border-gray-100/60'
+        }`}>
+          {section.header && (
+            <p className={`font-bold text-sm mb-2 ${
+              isWarning ? 'text-amber-700' :
+              isTips ? 'text-emerald-700' :
+              'text-smart-navy'
+            }`}>{section.header}</p>
+          )}
+          {section.lines.map((line, li) => {
+            if (line.startsWith('👉')) {
+              return (
+                <div key={li} className="flex items-start gap-2 py-1.5">
+                  <span className="text-sm shrink-0">👉</span>
+                  <span className="text-sm text-gray-700 leading-relaxed">{line.replace('👉', '').trim()}</span>
+                </div>
+              );
+            }
+            if (line.startsWith('⚠️')) {
+              return (
+                <div key={li} className="flex items-start gap-2 py-1">
+                  <span className="text-sm shrink-0">⚠️</span>
+                  <span className="text-xs text-amber-700 leading-relaxed font-medium">{line.replace('⚠️', '').trim()}</span>
+                </div>
+              );
+            }
+            if (line.startsWith('- ') || line.startsWith('• ')) {
+              return (
+                <div key={li} className="flex items-start gap-2 py-0.5 pl-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-smart-green shrink-0 mt-1.5"></span>
+                  <span className="text-sm text-gray-700 leading-relaxed">{line.replace(/^[-•]\s*/, '').trim()}</span>
+                </div>
+              );
+            }
+            return <p key={li} className="text-sm text-gray-600 leading-relaxed mb-1">{line}</p>;
+          })}
+        </div>
+      );
+    });
+  };
 
   // ── HITUNG TOTAL SECARA DINAMIS UNTUK BAGIAN FOOTER TABEL ──
   const totalWeight =
@@ -141,48 +199,21 @@ export default function AnalysisPage({
           /* ── LAYOUT UTAMA: VERTIKAL SATU KOLOM PENUH (FULL WIDTH) ── */
           <div className="flex flex-col gap-6 animate-fade-in w-full">
             
-            {/* Bagian Atas: Hasil Prediksi IHSG Engine */}
-            <div className="bg-smart-navy text-white rounded-2xl p-6 shadow-sm relative overflow-hidden w-full">
+            {/* Info strip ringkas: metode, indeks, periode */}
+            <div className="bg-smart-navy text-white rounded-2xl px-6 py-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 relative overflow-hidden w-full">
               <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-white/5 rounded-full blur-xl pointer-events-none" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-smart-green mb-3">
-                Arah Pergerakan IHSG
-              </h3>
-
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-3xl">
-                  {iData?.ihsg_analysis?.market_trend === "Bullish"
-                    ? "📈"
-                    : "📉"}
-                </span>
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-smart-green/20 flex items-center justify-center">
+                  <span className="text-lg">🧮</span>
+                </div>
                 <div>
-                  <p className="text-lg font-black tracking-wide">
-                    {iData?.ihsg_analysis?.description}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    Model: {iData?.ihsg_analysis?.model_architecture}
-                  </p>
+                  <p className="text-sm font-black tracking-wide">Metode: {metaForm?.model_choice}</p>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">Indeks {iData?.metadata?.index_choice} • BI Rate {iData?.metadata?.bi_rate}%</p>
                 </div>
               </div>
-
-              <div className="flex flex-col sm:flex-row sm:justify-between gap-2 text-xs border-t border-white/10 pt-3">
-                <div className="flex justify-between gap-2">
-                  <span className="text-gray-400">Akurasi AI:</span>
-                  <span className="font-bold text-smart-green">
-                    {fmtPersen(iData?.ihsg_analysis?.confidence)}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="text-gray-400">Target Indeks:</span>
-                  <span className="font-bold text-white uppercase">
-                    {iData?.metadata?.index_choice}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="text-gray-400">BI Rate Acuan:</span>
-                  <span className="font-bold text-white">
-                    {iData?.metadata?.bi_rate}%
-                  </span>
-                </div>
+              <div className="text-left sm:text-right relative z-10">
+                <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Periode Historis</p>
+                <p className="text-xs font-bold text-white mt-0.5">{iData?.metadata?.start_date || metaForm?.start_date} — {iData?.metadata?.end_date || metaForm?.end_date}</p>
               </div>
             </div>
 
@@ -275,16 +306,22 @@ export default function AnalysisPage({
               </div>  
             </div>
 
-            {/* Bagian Paling Bawah: Narasi AI Interpretasi (Full Lebar ke Kanan) */}
+            {/* Bagian Paling Bawah: Narasi AI Interpretasi (Premium Card Layout) */}
             {pData?.portfolio_summary && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm flex flex-col gap-4 w-full">
-                <h3 className="font-bold text-smart-navy text-base flex items-center gap-2 border-b border-gray-100 pb-3">
-                  <span className="text-lg">💡</span>
-                  Interpretasi Pintar AI
-                </h3>
-
-                <div className="text-sm text-gray-700 whitespace-pre-line leading-8 tracking-wide">
-                  {pData?.portfolio_summary}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col w-full overflow-hidden">
+                {/* Gradient Header */}
+                <div className="bg-gradient-to-r from-smart-navy via-[#1a2740] to-smart-navy px-6 py-4 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-smart-green/20 flex items-center justify-center">
+                    <span className="text-base">💡</span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-base">Interpretasi Pintar AI</h3>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Analisis Naratif oleh SmartInvest AI • {metaForm?.model_choice}</p>
+                  </div>
+                </div>
+                {/* Body: Parsed sections */}
+                <div className="p-6 flex flex-col gap-3">
+                  {renderGenAISections(pData?.portfolio_summary)}
                 </div>
               </div>
             )}

@@ -40,6 +40,83 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
   };
   const fmtNum = (val) => (val != null ? Number(val).toFixed(4) : "N/A");
   const fmtRupiah = (val) => val != null ? "Rp " + Number(val).toLocaleString("id-ID") : "Rp 0";
+  const fmtScore = (val) => val != null ? Number(val).toFixed(4) : "N/A";
+
+  // Helper: Parse GenAI text into styled sections (premium rendering)
+  const renderGenAISections = (text) => {
+    if (!text) return null;
+    const lines = text.split('\n');
+    const sections = [];
+    let currentSection = { lines: [] };
+
+    lines.forEach((line) => {
+      const trimmed = line.trim();
+      if (
+        (trimmed.match(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u) && trimmed.length > 3 && !trimmed.startsWith('\ud83d\udc49') && !trimmed.startsWith('\u26a0\ufe0f')) ||
+        trimmed.startsWith('## ') ||
+        (trimmed.startsWith('**') && trimmed.endsWith('**'))
+      ) {
+        if (currentSection.lines.length > 0) {
+          sections.push(currentSection);
+        }
+        currentSection = { header: trimmed.replace(/^##\s*/, '').replace(/\*\*/g, ''), lines: [] };
+      } else if (trimmed.length > 0) {
+        currentSection.lines.push(trimmed);
+      }
+    });
+    if (currentSection.lines.length > 0 || currentSection.header) {
+      sections.push(currentSection);
+    }
+
+    return sections.map((section, idx) => {
+      const isTips = section.lines.some(l => l.startsWith('\ud83d\udc49'));
+      const isWarning = section.lines.some(l => l.startsWith('\u26a0\ufe0f'));
+
+      return (
+        <div key={idx} className={`rounded-xl p-4 ${
+          isWarning ? 'bg-amber-50/60 border border-amber-200/50' :
+          isTips ? 'bg-emerald-50/40 border border-emerald-100/60' :
+          idx === 0 ? 'bg-gradient-to-r from-blue-50/60 to-indigo-50/40 border border-blue-100/50' :
+          'bg-gray-50/50 border border-gray-100/60'
+        }`}>
+          {section.header && (
+            <p className={`font-bold text-sm mb-2 ${
+              isWarning ? 'text-amber-700' :
+              isTips ? 'text-emerald-700' :
+              'text-smart-navy'
+            }`}>{section.header}</p>
+          )}
+          {section.lines.map((line, li) => {
+            if (line.startsWith('\ud83d\udc49')) {
+              return (
+                <div key={li} className="flex items-start gap-2 py-1.5">
+                  <span className="text-sm shrink-0">{'\ud83d\udc49'}</span>
+                  <span className="text-sm text-gray-700 leading-relaxed">{line.replace('\ud83d\udc49', '').trim()}</span>
+                </div>
+              );
+            }
+            if (line.startsWith('\u26a0\ufe0f')) {
+              return (
+                <div key={li} className="flex items-start gap-2 py-1">
+                  <span className="text-sm shrink-0">{'\u26a0\ufe0f'}</span>
+                  <span className="text-xs text-amber-700 leading-relaxed font-medium">{line.replace('\u26a0\ufe0f', '').trim()}</span>
+                </div>
+              );
+            }
+            if (line.startsWith('- ') || line.startsWith('\u2022 ')) {
+              return (
+                <div key={li} className="flex items-start gap-2 py-0.5 pl-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-smart-green shrink-0 mt-1.5"></span>
+                  <span className="text-sm text-gray-700 leading-relaxed">{line.replace(/^[-\u2022]\s*/, '').trim()}</span>
+                </div>
+              );
+            }
+            return <p key={li} className="text-sm text-gray-600 leading-relaxed mb-1">{line}</p>;
+          })}
+        </div>
+      );
+    });
+  };
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in">
@@ -67,67 +144,7 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
           </p>
         </div>
       </div>
-{/**
- 
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
-                  Estimasi 1 Tahun Dana
-                </h3>
-                <div className="flex flex-col gap-3">
-                  <div className="flex justify-between items-center bg-emerald-50/30 p-2.5 rounded-xl border border-emerald-100/50">
-                    <span className="text-xs font-medium text-gray-500">
-                      Potensi Naik
-                    </span>
-                    <span className="text-sm font-bold text-smart-green">
-                      +{fmtRupiah(iData?.investment_simulation?.potential_gain)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center bg-rose-50/30 p-2.5 rounded-xl border border-rose-100/50">
-                    <span className="text-xs font-medium text-gray-500">
-                      Potensi Turun
-                    </span>
-                    <span className="text-sm font-bold text-rose-500">
-                      -{fmtRupiah(iData?.investment_simulation?.potential_loss)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                <div className="bg-emerald-50/40 border border-emerald-100/60 rounded-xl p-3.5 text-center flex flex-col justify-center">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
-                    Expected Return
-                  </p>
-                  <p className="text-xl font-black text-smart-green">
-                    {fmtPersen(activeReturn)}
-                  </p>
-                </div>
-                <div className="bg-rose-50/40 border border-rose-100/60 rounded-xl p-3.5 text-center flex flex-col justify-center">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
-                    Risiko Tahunan
-                  </p>
-                  <p className="text-xl font-black text-rose-500">
-                    {fmtPersen(activeRisk)}
-                  </p>
-                </div>
-                <div className="bg-gray-50 border border-gray-100 rounded-xl p-3.5 text-center flex flex-col justify-center">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
-                    Sharpe Ratio
-                  </p>
-                  <p className="text-xl font-black text-smart-navy">
-                    {fmtNum(activeSharpe)}
-                  </p>
-                </div>
-                <div className="bg-blue-50/40 border border-blue-100/50 rounded-xl p-3.5 text-center flex flex-col justify-center">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">
-                    Simulasi Dana
-                  </p>
-                  <p className="text-xs font-bold text-blue-600 truncate">
-                    {fmtRupiah(initialAmount)}
-                  </p>
-                </div>
-              </div>
- */}
+
       {/* Kontainer 1: Grid Metrik Utama (4 Kolom) */}
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -170,7 +187,44 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
         </div>
       </div>
 
-      {/* Kontainer 2: Grid Metrik Sekunder (3 Kolom) */}
+      {/* Kontainer 2.5: Estimasi 1 Tahun Dana Investasi */}
+      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <h2 className="text-base font-bold text-smart-navy mb-4 flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+          Estimasi Simulasi Dana 1 Tahun
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-blue-50/40 border border-blue-100/50 rounded-xl p-4 text-center flex flex-col justify-center">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Modal Awal</p>
+            <p className="text-lg font-black text-blue-600">{fmtRupiah(iData?.investment_simulation?.initial_amount)}</p>
+          </div>
+          <div className="bg-emerald-50/40 border border-emerald-100/60 rounded-xl p-4 text-center flex flex-col justify-center">
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-smart-green">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+              </svg>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Potensi Naik</p>
+            </div>
+            <p className="text-lg font-black text-smart-green">+{fmtRupiah(iData?.investment_simulation?.potential_gain)}</p>
+          </div>
+          <div className="bg-rose-50/40 border border-rose-100/60 rounded-xl p-4 text-center flex flex-col justify-center">
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-rose-500">
+                <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/>
+              </svg>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Potensi Turun</p>
+            </div>
+            <p className="text-lg font-black text-rose-500">-{fmtRupiah(iData?.investment_simulation?.potential_loss)}</p>
+          </div>
+        </div>
+        <p className="text-[10px] text-gray-400 mt-3 leading-relaxed text-center">
+          * Estimasi dihitung berdasarkan expected return dan risiko tahunan metode terbaik terhadap modal investasi awal.
+        </p>
+      </div>
+
+      {/* Kontainer 3 (lanjutan): Metrik Sekunder */}
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 text-center">
@@ -229,27 +283,33 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
                 <th className="p-4 text-center">Sharpe</th>
                 <th className="p-4 text-center">Beta</th>
                 <th className="p-4 text-center">Alpha</th>
-                {/* DITAMBAHKAN ACUAN KOLOM BI RATE */}
                 <th className="p-4 text-center">BI Rate Acuan</th>
+                <th className="p-4 text-center">Final Score</th>
                 <th className="p-4 text-center">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 font-medium text-gray-600">
               {iData?.method_comparison?.map((m, idx) => (
-                <tr key={idx} className="hover:bg-gray-50/40 transition-colors">
+                <tr key={idx} className={`hover:bg-gray-50/40 transition-colors ${m.is_best ? 'bg-emerald-50/20' : ''}`}>
                   <td className="p-4 font-bold text-smart-navy">{m.method}</td>
                   <td className="p-4 text-center text-emerald-600 font-bold">{fmtPersen(m.return)}</td>
                   <td className="p-4 text-center text-rose-500 font-bold">{fmtPersen(m.risk)}</td>
                   <td className="p-4 text-center text-gray-700 font-bold">{fmtNum(m.sharpe)}</td>
                   <td className="p-4 text-center text-gray-600">{fmtNum(m.beta)}</td>
                   <td className="p-4 text-center text-gray-600">{fmtNum(m.alpha)}</td>
-                  {/* MENAMPILKAN DATA METADATA BI RATE SECARA DINAMIS */}
                   <td className="p-4 text-center font-semibold text-gray-500">{iData?.metadata?.bi_rate != null ? iData.metadata.bi_rate + "%" : "N/A"}</td>
                   <td className="p-4 text-center">
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide ${
+                    <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-black tracking-wide ${
+                      m.is_best ? 'bg-smart-green/10 text-smart-green border border-smart-green/20' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {fmtScore(m.final_score)}
+                    </span>
+                  </td>
+                  <td className="p-4 text-center">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide flex items-center gap-1 ${
                       m.is_best ? "bg-smart-green text-white shadow-sm" : "bg-gray-100 text-gray-400"
                     }`}>
-                      {m.is_best ? "TERBAIK" : "PEMBANDING"}
+                      {m.is_best ? "⭐ TERBAIK" : "PEMBANDING"}
                     </span>
                   </td>
                 </tr>
@@ -258,18 +318,24 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
           </table>
         </div>
         <p className="text-[10px] text-gray-400 mt-3 leading-relaxed px-1">
-          * Return dan Risiko dihitung secara tahunan. Sharpe Ratio menggunakan risk-free rate BI terkini sebesar {iData?.metadata?.bi_rate || 5.8}%. Beta & Alpha dihitung terhadap volatilitas pergerakan pasar (IHSG).
+          * Return dan Risiko dihitung secara tahunan. Sharpe Ratio menggunakan risk-free rate BI terkini sebesar {iData?.metadata?.bi_rate || 5.8}%. Beta & Alpha dihitung terhadap volatilitas pergerakan pasar (IHSG). <strong>Final Score</strong> adalah skor pembobotan akhir yang digunakan Decision Engine untuk menentukan metode terbaik berdasarkan kondisi pasar.
         </p>
       </div>
 
-      {/* Kontainer 5: Interpretasi AI */}
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-        <div className="flex items-center gap-2 mb-4 border-b border-gray-50 pb-2">
-          <h2 className="text-base font-bold text-smart-navy">Interpretasi Rekomendasi Pintar AI</h2>
+      {/* Kontainer 5: Interpretasi AI (Premium Card Layout) */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-gradient-to-r from-smart-navy via-[#1a2740] to-smart-navy px-6 py-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-smart-green/20 flex items-center justify-center">
+            <span className="text-base">🤖</span>
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-white">Interpretasi Rekomendasi Pintar AI</h2>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Rekomendasi Naratif oleh SmartInvest AI • {iData?.decision_engine?.best_method || 'N/A'}</p>
+          </div>
         </div>
         {iData?.ai_interpretation && (
-          <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50/60 border border-gray-100 p-5 rounded-xl">
-            {iData.ai_interpretation}
+          <div className="p-6 flex flex-col gap-3">
+            {renderGenAISections(iData.ai_interpretation)}
           </div>
         )}
       </div>
