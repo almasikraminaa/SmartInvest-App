@@ -12,3 +12,7 @@ tensorflow
 h5py==3.13.0
 numpy==1.26.4
 google-generativeai
+supabase==2.15.3
+requests
+beautifulsoup4
+lxml

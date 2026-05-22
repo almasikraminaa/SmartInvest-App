@@ -1,11 +1,15 @@
 from dotenv import load_dotenv
 
 load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from services.bi_rate_scraper import (
+    save_bi_rate_to_supabase
+)
 
 # ==========================
-# IMPORT  ROUTES
+# IMPORT ROUTES
 # ==========================
 
 from routes.portfolio import (
@@ -16,10 +20,18 @@ from routes.ihsg import (
     router as ihsg_router
 )
 
+# ==========================
+# IMPORT SERVICES
+# ==========================
+
+from services.bi_rate_scraper import (
+    save_bi_rate_to_supabase
+)
 
 # ==========================
 # FASTAPI APP
 # ==========================
+
 
 app = FastAPI(
     title="SmartInvest AI API",
@@ -35,6 +47,19 @@ app = FastAPI(
     version="1.0.0"
 )
 
+
+# ==========================
+# STARTUP EVENT
+# ==========================
+
+@app.on_event("startup")
+async def startup_event():
+
+    print("Update BI Rate...")
+
+    save_bi_rate_to_supabase()
+
+    print("Selesai update BI Rate")
 
 # ==========================
 # CORS
