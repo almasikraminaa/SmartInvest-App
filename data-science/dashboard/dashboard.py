@@ -71,11 +71,18 @@ def load_css(file_path):
 
 st.set_page_config(
     page_title="SmartInvest",
-    page_icon="📈",
+    page_icon="assets/logo.png",
     layout="wide"
 )
 
+# LOAD CSS
 load_css(Path("assets/style.css"))
+
+# BOOTSTRAP ICONS
+st.markdown("""
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+""", unsafe_allow_html=True)
 
 
 # =========================================================
@@ -160,8 +167,14 @@ price_matrix, market_price, bi_rate_daily, raw_price_matrix = load_all_data()
 # SIDEBAR
 # =========================================================
 
-st.sidebar.title("📈 SmartInvest")
-st.sidebar.markdown("Portfolio Recommendation System")
+st.sidebar.markdown("""
+<div class="sidebar-brand">
+    <div>
+        <h1>SmartInvest</h1>
+        <p>Portfolio Recommendation System</p>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 st.sidebar.divider()
 st.sidebar.subheader("Calculation Settings")
@@ -274,9 +287,14 @@ if run_button:
             "selected_result": selected_result
         }
 
-        st.success(
-            "Analisis berhasil dijalankan. Tab EDA dan Portfolio Analysis sudah diperbarui."
-        )
+        st.markdown("""
+        <div class="overview-card success-card">
+        <div class="overview-title">ANALYSIS STATUS</div>
+        <div class="overview-text">
+        Analisis berhasil dijalankan. Tab EDA dan Portfolio Analysis sudah diperbarui.
+        </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     except Exception as e:
         st.error(f"Terjadi error saat menjalankan analisis: {e}")
@@ -286,7 +304,12 @@ if run_button:
 # HEADER
 # =========================================================
 
-st.title("📈 SmartInvest Dashboard")
+st.markdown("""
+<div class="hero-title">
+    <img src="https://cdn-user-icons.flaticon.com/157934/157934585/1779601621261.svg?token=exp=1779602528~hmac=8d2c16188633508bd11016695ce9e369">
+    <span>SmartInvest Dashboard</span>
+</div>
+""", unsafe_allow_html=True)
 
 st.markdown(
     """
@@ -302,7 +325,7 @@ st.markdown(
 # =========================================================
 
 tab_eda, tab_portfolio = st.tabs(
-    ["📊 Stock EDA", "💼 Portfolio Analysis"]
+    ["Stock Exploratory Data Analysis", "Portfolio Analysis"]
 )
 
 
@@ -312,19 +335,40 @@ tab_eda, tab_portfolio = st.tabs(
 
 with tab_eda:
 
-    st.header("📊 Stock Exploratory Data Analysis")
+    st.header("Stock Exploratory Data Analysis")
     st.caption(
-        "EDA digunakan untuk memahami karakteristik saham berdasarkan return, risiko, "
+        "Exploratory Data Analysis digunakan untuk memahami karakteristik saham berdasarkan return, risiko, "
         "volatilitas, Sharpe Ratio, korelasi, dan hubungan risk-return."
     )
 
     if st.session_state.analysis_result is None:
 
-        eda_index_choice = st.radio(
-            "Pilih indeks untuk EDA",
-            ["LQ45", "IDX30"],
-            horizontal=True
-        )
+        st.markdown("**Pilih indeks untuk Exploratory Data Analysis**")
+
+        if "eda_index_choice" not in st.session_state:
+            st.session_state.eda_index_choice = "LQ45"
+
+        col_lq45, col_idx30 = st.columns(2)
+
+        with col_lq45:
+            if st.button(
+                "LQ45",
+                key="btn_eda_lq45",
+                use_container_width=True,
+                type="primary" if st.session_state.eda_index_choice == "LQ45" else "secondary"
+            ):
+                st.session_state.eda_index_choice = "LQ45"
+
+        with col_idx30:
+            if st.button(
+                "IDX30",
+                key="btn_eda_idx30",
+                use_container_width=True,
+                type="primary" if st.session_state.eda_index_choice == "IDX30" else "secondary"
+            ):
+                st.session_state.eda_index_choice = "IDX30"
+
+        eda_index_choice = st.session_state.eda_index_choice
 
         eda_price_matrix = raw_price_matrix
 
@@ -336,11 +380,19 @@ with tab_eda:
             ]
         }
 
-        st.info(
+        st.markdown(
             f"""
-            EDA awal menampilkan gambaran umum data historis 5 tahun.  
-            Jumlah saham tersedia untuk visualisasi: **{len(eda_index_map[eda_index_choice])} saham**.
-            """
+            <div class="smart-info-card">
+                <div class="smart-info-card-title">EDA Overview</div>
+                <div class="smart-info-card-body">
+                    Dashboard menampilkan gambaran umum data historis saham selama 5 tahun.
+                    Jumlah saham yang tersedia untuk visualisasi pada indeks
+                    <strong>{eda_index_choice}</strong> adalah
+                    <strong>{len(eda_index_map[eda_index_choice])} saham</strong>.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
         )
 
     else:
@@ -355,12 +407,21 @@ with tab_eda:
             eda_index_choice: eda_price_matrix.columns.tolist()
         }
 
-        st.info(
+        st.markdown(
             f"""
-            EDA saat ini mengikuti input user untuk indeks **{eda_index_choice}**
-            pada periode **{user_input['start_date']}** sampai **{user_input['end_date']}**.  
-            Jumlah saham valid setelah dynamic filtering: **{eda_price_matrix.shape[1]} saham**.
-            """
+            <div class="smart-info-card">
+                <div class="smart-info-card-title">Filtered EDA Overview</div>
+                <div class="smart-info-card-body">
+                    Visualisasi EDA mengikuti input user untuk indeks
+                    <strong>{eda_index_choice}</strong> pada periode
+                    <strong>{user_input['start_date']}</strong> sampai
+                    <strong>{user_input['end_date']}</strong>.
+                    Jumlah saham valid setelah dynamic filtering adalah
+                    <strong>{eda_price_matrix.shape[1]} saham</strong>.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
         )
 
     with st.spinner(f"Menjalankan EDA untuk {eda_index_choice}..."):
@@ -558,7 +619,7 @@ with tab_eda:
 
 with tab_portfolio:
 
-    st.header("💼 Portfolio Analysis")
+    st.header("Portfolio Analysis")
     st.caption(
         "Analisis portfolio menampilkan rekomendasi alokasi dana, performa portfolio, "
         "perbandingan model, dan detail teknis proses perhitungan."
@@ -566,9 +627,14 @@ with tab_portfolio:
 
     if st.session_state.analysis_result is None:
 
-        st.info(
-            "Silakan isi parameter di sidebar lalu klik **Run Analysis** untuk menampilkan hasil portfolio."
-        )
+        st.markdown("""
+        <div class="overview-card">
+        <div class="overview-title">PORTFOLIO ANALYSIS OVERVIEW</div>
+        <div class="overview-text">
+        Silakan isi parameter di sidebar lalu klik <strong>Run Analysis</strong> untuk menampilkan hasil portfolio.
+        </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     else:
         result = st.session_state.analysis_result
@@ -619,10 +685,23 @@ with tab_portfolio:
         col6.metric("Lowest Risk Model", lowest_risk_model)
         col7.metric("Highest Return Model", highest_return_model)
 
-        st.info(
-            f"Analisis dilakukan pada indeks **{user_input['index_choice']}** "
-            f"periode **{user_input['start_date']}** sampai **{user_input['end_date']}** "
-            f"dengan modal investasi **{format_rupiah(user_input['investment_amount'])}**."
+        st.markdown(
+            f"""
+            <div class="smart-info-card">
+                <div class="smart-info-card-title">Portfolio Overview</div>
+                <div class="smart-info-card-body">
+                    Analisis dilakukan pada indeks
+                    <strong>{user_input['index_choice']}</strong>
+                    periode
+                    <strong>{user_input['start_date']}</strong>
+                    sampai
+                    <strong>{user_input['end_date']}</strong>
+                    dengan modal investasi
+                    <strong>{format_rupiah(user_input['investment_amount'])}</strong>.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
         )
 
         st.divider()
@@ -800,7 +879,14 @@ with tab_portfolio:
             valid_ticker_count=feature_summary["final_ticker_count"]
         )
 
-        st.info(advisor_text)
+        st.markdown(f"""
+        <div class="overview-card">
+        <div class="overview-title">AI ADVISOR / PORTFOLIO INSIGHT</div>
+        <div class="overview-text">
+        {advisor_text}
+        </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         st.divider()
 

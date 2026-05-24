@@ -119,32 +119,58 @@ div[data-baseweb="select"] span {
     font-weight: 600;
 }
 
-/* =========================================================
-BUTTON
-========================================================= */
+/* ========================================
+RUN ANALYSIS BUTTON
+======================================== */
 
-.stButton > button {
-    width: 100%;
-    min-height: 46px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #0f2a64 0%, #1e3a8a 100%);
-    color: #ffffff;
-    border: none;
-    font-weight: 750;
-    letter-spacing: 0.01em;
-    box-shadow: 0 8px 18px rgba(30, 58, 138, 0.22);
-    transition: all 0.2s ease-in-out;
+div.stButton > button {
+    width: 100% !important;
+    height: 56px !important;
+
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+
+    border: none !important;
+    border-radius: 16px !important;
+
+    font-size: 18px !important;
+    font-weight: 800 !important;
+
+    letter-spacing: 0.4px !important;
+
+    opacity: 1 !important;
+
+    transition: all 0.25s ease;
+
+    text-shadow: 0 1px 2px rgba(0,0,0,0.25);
 }
 
-.stButton > button:hover {
-    background: linear-gradient(135deg, #163b82 0%, #2554b8 100%);
-    color: #ffffff;
+/* TEXT */
+div.stButton > button p,
+div.stButton > button span {
+    color: #FFFFFF !important;
+    font-weight: 800 !important;
+    opacity: 1 !important;
+}
+
+/* Hover */
+div.stButton > button:hover {
+    background: #0F172A;
+    color: white;
+
     transform: translateY(-1px);
-    box-shadow: 0 10px 22px rgba(30, 58, 138, 0.28);
+    box-shadow: 0 6px 18px rgba(30, 41, 59, 0.25);
 }
 
-.stButton > button:active {
-    transform: translateY(0);
+/* Active Click */
+div.stButton > button:active {
+    transform: scale(0.98);
+}
+
+/* Fokus */
+div.stButton > button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.20);
 }
 
 /* =========================================================
@@ -152,26 +178,81 @@ TABS
 ========================================================= */
 
 .stTabs [data-baseweb="tab-list"] {
-    gap: 0.35rem;
-    background-color: #ffffff;
-    padding: 0.35rem;
-    border-radius: 15px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.035);
+    width: 100% !important;
+
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+
+    gap: 8px;
+
+    background: #ffffff !important;
+
+    border: 1px solid #e2e8f0 !important;
+
+    border-radius: 20px !important;
+
+    padding: 8px !important;
+
+    box-shadow:
+        0 6px 18px rgba(15, 23, 42, 0.05) !important;
 }
 
+
+/* TAB ITEM */
 .stTabs [data-baseweb="tab"] {
-    height: 40px;
-    padding: 0 1rem;
-    border-radius: 11px;
-    color: #475569;
-    font-size: 0.9rem;
-    font-weight: 700;
+
+    flex: 1 !important;              /* bikin full membagi area */
+
+    height: 54px !important;
+
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+
+    border-radius: 16px !important;
+
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+
+    color: #64748b !important;
+
+    background: transparent !important;
+
+    transition: all 0.25s ease;
 }
 
+
+/* TAB ACTIVE */
 .stTabs [aria-selected="true"] {
-    background: #eaf1ff;
-    color: #1e3a8a;
+
+    background: #1E293B !important;
+
+    color: #ffffff !important;
+
+    box-shadow:
+        0 8px 20px rgba(30, 41, 59, 0.18);
+
+    transform: translateY(-1px);
+}
+
+
+/* TEXT ACTIVE */
+.stTabs [aria-selected="true"] p,
+.stTabs [aria-selected="true"] span {
+
+    color: #ffffff !important;
+
+    font-weight: 800 !important;
+}
+
+
+/* HOVER */
+.stTabs [data-baseweb="tab"]:hover {
+
+    background: #f8fafc !important;
+
+    color: #1E293B !important;
 }
 
 /* =========================================================
@@ -348,4 +429,288 @@ div[data-testid="stPlotlyChart"] {
 
 div[data-testid="stPlotlyChart"] > div {
     overflow: hidden;
+}
+
+/* =========================================================
+CLEAN TABS
+========================================================= */
+
+.stTabs [data-baseweb="tab-list"] {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 18px !important;
+    padding: 6px !important;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05) !important;
+}
+
+.stTabs [data-baseweb="tab"] {
+    height: 46px !important;
+    padding: 0 22px !important;
+    border-radius: 14px !important;
+    color: #64748b !important;
+    font-weight: 700 !important;
+    background: transparent !important;
+}
+
+.stTabs [aria-selected="true"] {
+    background: #1E293B !important;
+    color: #ffffff !important;
+}
+
+.stTabs [aria-selected="true"] p,
+.stTabs [aria-selected="true"] span {
+    color: #ffffff !important;
+    font-weight: 800 !important;
+}
+
+
+/* =========================================================
+EDA INDEX SELECTOR - TAB STYLE
+========================================================= */
+
+div[role="radiogroup"] {
+    width: 100% !important;
+    display: flex !important;
+    gap: 8px !important;
+
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 20px !important;
+
+    padding: 8px !important;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05) !important;
+}
+
+/* setiap pilihan */
+div[role="radiogroup"] label {
+    flex: 1 !important;
+    height: 54px !important;
+
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+
+    border-radius: 16px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background: transparent !important;
+    color: #475569 !important;
+
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+
+    cursor: pointer !important;
+}
+
+/* sembunyikan lingkaran radio */
+div[role="radiogroup"] label > div:first-child {
+    display: none !important;
+}
+
+/* teks radio */
+div[role="radiogroup"] label p,
+div[role="radiogroup"] label span {
+    color: #475569 !important;
+    font-weight: 700 !important;
+}
+
+/* pilihan aktif */
+div[role="radiogroup"] label:has(input:checked) {
+    background: #1E293B !important;
+    color: #ffffff !important;
+    box-shadow: 0 8px 20px rgba(30, 41, 59, 0.18) !important;
+}
+
+/* teks pilihan aktif */
+div[role="radiogroup"] label:has(input:checked) p,
+div[role="radiogroup"] label:has(input:checked) span {
+    color: #ffffff !important;
+    font-weight: 800 !important;
+}
+
+/* hover */
+div[role="radiogroup"] label:hover {
+    background: #f8fafc !important;
+}
+
+div[role="radiogroup"] label:has(input:checked):hover {
+    background: #1E293B !important;
+}
+
+/* =========================================================
+EDA INDEX BUTTON GROUP
+========================================================= */
+
+button[kind="primary"] {
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+    border: 1px solid #1E293B !important;
+    font-weight: 800 !important;
+}
+
+button[kind="primary"] p,
+button[kind="primary"] span {
+    color: #FFFFFF !important;
+    font-weight: 800 !important;
+}
+
+button[kind="secondary"] {
+    background: #FFFFFF !important;
+    color: #334155 !important;
+    border: 1px solid #E2E8F0 !important;
+    font-weight: 750 !important;
+}
+
+button[kind="secondary"] p,
+button[kind="secondary"] span {
+    color: #334155 !important;
+    font-weight: 750 !important;
+}
+
+/* =========================================================
+CUSTOM INFO CARD
+========================================================= */
+
+.smart-info-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-left: 5px solid #1E293B;
+    border-radius: 18px;
+    padding: 20px 24px;
+    margin: 18px 0 24px 0;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.045);
+}
+
+.smart-info-card-title {
+    color: #1E293B;
+    font-size: 0.9rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+}
+
+.smart-info-card-body {
+    color: #475569;
+    font-size: 1rem;
+    line-height: 1.65;
+}
+
+.smart-info-card-body strong {
+    color: #1E293B;
+    font-weight: 800;
+}
+
+/* =========================================================
+TAB ICONS
+========================================================= */
+
+/* TAB 1 ICON */
+.stTabs [data-baseweb="tab"]:nth-child(1)::before {
+    content: "\f3b9";
+    font-family: "bootstrap-icons";
+    margin-right: 10px;
+    font-size: 1rem;
+    font-weight: normal;
+}
+
+/* TAB 2 ICON */
+.stTabs [data-baseweb="tab"]:nth-child(2)::before {
+    content: "\f3c4";
+    font-family: "bootstrap-icons";
+    margin-right: 10px;
+    font-size: 1rem;
+    font-weight: normal;
+}
+
+/* ========================================
+   HERO TITLE
+======================================== */
+
+.hero-title {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 22px;
+}
+
+.hero-title img {
+    width: 58px;
+    height: 58px;
+    object-fit: contain;
+}
+
+.hero-title span {
+    font-size: 64px;
+    font-weight: 800;
+    color: #334155;
+    line-height: 1.1;
+}
+
+/* ========================================
+   SIDEBAR BRAND
+======================================== */
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 10px;
+    margin-bottom: 24px;
+}
+
+.sidebar-brand img {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+}
+
+.sidebar-brand h1 {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0F172A;
+    margin: 0;
+    line-height: 1.1;
+}
+
+.sidebar-brand p {
+    font-size: 13px;
+    color: #64748B;
+    margin: 2px 0 0 0;
+}
+
+/* ========================================
+   OVERVIEW CARD
+======================================== */
+
+.overview-card {
+    background: #FFFFFF;
+    border-radius: 24px;
+    padding: 30px 36px;
+    margin-top: 20px;
+    margin-bottom: 24px;
+
+    border: 1px solid #E2E8F0;
+    border-left: 8px solid #1E293B;
+
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+}
+
+.overview-title {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #1E293B;
+    margin-bottom: 18px;
+}
+
+.overview-text {
+    font-size: 18px;
+    line-height: 1.9;
+    color: #475569;
+}
+
+.success-card {
+    border-left: 8px solid #10B981;
 }
