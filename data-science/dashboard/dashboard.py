@@ -80,9 +80,10 @@ st.set_page_config(
 )
 
 # LOAD CSS
-load_css(Path("assets/style.css"))
+BASE_DIR = Path(__file__).resolve().parent
 
-logo_base64 = image_to_base64("assets/logo.png")
+load_css(BASE_DIR / "assets" / "style.css")
+logo_base64 = image_to_base64(BASE_DIR / "assets" / "logo.png")
 
 # BOOTSTRAP ICONS
 st.markdown("""
@@ -297,7 +298,7 @@ if run_button:
         <div class="overview-card success-card">
         <div class="overview-title">ANALYSIS STATUS</div>
         <div class="overview-text">
-        Analisis berhasil dijalankan. Tab EDA dan Portfolio Analysis sudah diperbarui.
+        Analisis telah berhasil dijalankan. Tab Stock Exploratory Data Analysis dan Portfolio Analysis sudah diperbarui.
         </div>
         </div>
         """, unsafe_allow_html=True)
