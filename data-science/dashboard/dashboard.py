@@ -1,4 +1,5 @@
 import streamlit as st
+import base64
 from pathlib import Path
 from datetime import date
 
@@ -64,7 +65,10 @@ def load_css(file_path):
                 unsafe_allow_html=True
             )
 
-
+def image_to_base64(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode()
+    
 # =========================================================
 # PAGE CONFIG
 # =========================================================
@@ -77,6 +81,8 @@ st.set_page_config(
 
 # LOAD CSS
 load_css(Path("assets/style.css"))
+
+logo_base64 = image_to_base64("assets/logo.png")
 
 # BOOTSTRAP ICONS
 st.markdown("""
@@ -304,9 +310,9 @@ if run_button:
 # HEADER
 # =========================================================
 
-st.markdown("""
+st.markdown(f"""
 <div class="hero-title">
-    <img src="https://cdn-user-icons.flaticon.com/157934/157934585/1779601621261.svg?token=exp=1779602528~hmac=8d2c16188633508bd11016695ce9e369">
+    <img src="data:image/png;base64,{logo_base64}">
     <span>SmartInvest Dashboard</span>
 </div>
 """, unsafe_allow_html=True)

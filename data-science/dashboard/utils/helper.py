@@ -325,3 +325,4 @@ def generate_simple_advisor(
     )
 
     return advisor_text
+
