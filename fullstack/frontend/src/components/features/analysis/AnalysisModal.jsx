@@ -23,7 +23,7 @@ export default function AnalysisModal({
   onAnalysisComplete,
   preSelectedMethod = "",
 }) {
-  // ⚡ SEKARANG DEFAULT STATE KOSONG MURNI (TANPA DEFAULT VALUE) ⚡
+  // ⚡ DEFAULT STATE KOSONG (TANPA DEFAULT VALUE) ⚡
   const [formData, setFormData] = useState({
     model_choice: "",
     index_choice: "",
@@ -65,6 +65,23 @@ export default function AnalysisModal({
           : Number(e.target.value)
         : e.target.value;
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+const handleQuickSelect = (months) => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - months);
+
+    const formatDate = (date) => date.toISOString().split('T')[0];
+
+    setFormData((prev) => ({
+      ...prev,
+      start_date: formatDate(startDate),
+      end_date: formatDate(endDate),
+    }));
+    
+    // Opsional: hapus error jika user klik tombol cepat
+    setErrors((prev) => ({ ...prev, start_date: null, end_date: null }));
   };
 
   const validateForm = () => {
@@ -172,6 +189,7 @@ export default function AnalysisModal({
 
   if (!isOpen) return null;
 
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-smart-navy/60 backdrop-blur-sm p-6"
@@ -180,7 +198,7 @@ export default function AnalysisModal({
       <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl border border-gray-100 flex flex-col gap-6 max-h-[88vh] overflow-y-auto relative">
         <div>
           <h2 className="text-2xl font-bold text-smart-navy mb-1">
-            Konfigurasi Ganda AI
+            Konfigurasi AI
           </h2>
           <p className="text-gray-400 text-sm font-medium">
             Masukkan parameter analisis baru Anda
@@ -275,7 +293,28 @@ export default function AnalysisModal({
                 />
               </div>
             </div>
+            {/* radio button */}
+           <div className="flex gap-4 mt-3 px-1">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="period"
+                className="accent-smart-navy h-4 w-4"
+                onChange={() => handleQuickSelect(6)}
+              />
+              <span className="text-[10px] font-bold text-gray-500">6 Bulan</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="period"
+                className="accent-smart-navy h-4 w-4"
+                onChange={() => handleQuickSelect(12)}
+              />
+              <span className="text-[10px] font-bold text-gray-500">1 Tahun</span>
+            </label>
           </div>
+        </div>
 
           {/* Investment Amount */}
           <div

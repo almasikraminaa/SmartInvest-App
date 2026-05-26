@@ -76,8 +76,8 @@ export default function Navbar() {
           {/* User Profile */}
           {isLoggedIn ? (
             <div className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 p-1.5 pr-3 rounded-full transition-colors relative group">
-              <div className="w-9 h-9 bg-smart-green rounded-full flex items-center justify-center text-white font-bold text-sm">R</div>
-              <span className="font-medium text-gray-700 text-sm">Reynaldi</span>
+              <div className="w-9 h-9 bg-smart-green rounded-full flex items-center justify-center text-white font-bold text-sm">U</div>
+              <span className="font-medium text-gray-700 text-sm">user</span>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500"><path d="m6 9 6 6 6-6"/></svg>
             </div>
           ) : (
