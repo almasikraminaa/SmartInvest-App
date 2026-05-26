@@ -121,7 +121,7 @@ export default function AnalysisPage({
             <h1 className="text-2xl font-bold text-smart-navy">
               Analisis Kuantitatif Portofolio & IHSG
             </h1>
-            <p className="text-gray-400 text-sm mt-0.5">
+            <p className="text-400 text-sm mt-0.5">
               Sinkronisasi Alokasi Kuantitatif Terpilih dengan Prediksi Arah AI
               Makro bursa.
             </p>
@@ -184,7 +184,7 @@ export default function AnalysisPage({
             <h2 className="text-xl font-bold text-smart-navy mb-1">
               Optimasi Portofolio Anda
             </h2>
-            <p className="text-gray-400 text-sm font-medium mb-6 text-center max-w-sm px-4">
+            <p className="text-400 text-sm font-medium mb-6 text-center max-w-sm px-4">
               Tentukan target indeks bursa dan model perhitungan manajemen
               risiko yang Anda inginkan.
             </p>

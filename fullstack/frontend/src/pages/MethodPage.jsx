@@ -5,13 +5,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 export default function MethodPage({ setIsAnalysisModalOpen, setPreSelectedMethod }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeMethod, setActiveMethod] = useState('MVEP');
+  const [expandedMethod, setExpandedMethod] = useState(null);
 
-  // Baca hash dari URL untuk set tab aktif
   useEffect(() => {
     const hash = location.hash.replace('#', '').toUpperCase();
     if (['MVEP', 'SIM', 'CAPM'].includes(hash)) {
-      setActiveMethod(hash);
+      setExpandedMethod(hash);
     }
   }, [location.hash]);
 
@@ -24,15 +23,13 @@ export default function MethodPage({ setIsAnalysisModalOpen, setPreSelectedMetho
   const methodData = {
     MVEP: {
       title: "Minimum Variance Efficient Portfolio (MVEP)",
-      target: "Cocok untuk: Risiko Rendah - Menengah",
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
-      ),
-      concept: "Mengoptimalkan bobot Aset anda untuk meminimalkan risiko pada tingkat return tertentu.",
-      howItWorks: "Metode ini mencari titik keseimbangan di mana fluktuasi harga antar saham saling menetralkan secara optimal. Algoritma mencari kombinasi pembobotan aset dengan varians portofolio yang paling minimal berdasarkan data pergerakan harga historis.",
+      problem: "Takut risiko besar saat menyusun portofolio?",
+      shortDesc: "MVEP (Mean Variance Efficient Portfolio) — membantu menemukan kombinasi portofolio dengan risiko minimum.",
+      concept: "Mengoptimalkan bobot aset untuk meminimalkan risiko pada tingkat return tertentu.",
+      howItWorks: "Metode ini mencari titik keseimbangan di mana fluktuasi harga antar saham saling menetralkan secara optimal. Algoritma mencari kombinasi pembobotan aset dengan varians portofolio yang paling minimal.",
       education: {
         definition: "MVEP didefinisikan sebagai portofolio yang memiliki variansi minimum diantara keseluruhan kemungkinan portofolio yang dapat dibentuk.",
-        detail: "Jika diasumsikan preferensi investor terhadap risiko adalah risk averse (menghindari risiko), maka portofolio yang memiliki mean variance efisien adalah portofolio yang memiliki variansi minimum dari mean returnnya.",
+        detail: "Jika diasumsikan preferensi investor terhadap risiko adalah risk averse, maka portofolio yang memiliki mean variance efisien adalah portofolio yang memiliki variansi minimum dari mean returnnya.",
         formula: "Optimalisasi bobot w = [w₁  w₂  ...  wₙ]ᵀ berdasarkan maksimum mean return dari variansi yang diberikan.",
       },
       pros: [
@@ -47,12 +44,10 @@ export default function MethodPage({ setIsAnalysisModalOpen, setPreSelectedMetho
     },
     SIM: {
       title: "Single Index Model (SIM)",
-      target: "Cocok untuk: Risiko Menengah - Tinggi",
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-      ),
+      problem: "Bingung membaca pergerakan tren pasar?",
+      shortDesc: "SIM (Single Index Model) — menganalisis hubungan saham terhadap pergerakan pasar.",
       concept: "Mengukur return masing-masing saham berdasarkan pergerakan pasar (IHSG).",
-      howItWorks: "Metode ini membandingkan return ekspektasi saham tunggal dengan return ekspektasi pasar yang diukur menggunakan beta (β). Saham dengan excess return to beta (ERB) tertinggi yang dimasukkan ke portofolio sebagai pendorong utama growth.",
+      howItWorks: "Metode ini membandingkan return ekspektasi saham tunggal dengan return ekspektasi pasar yang diukur menggunakan beta (β). Saham dengan excess return to beta (ERB) tertinggi dimasukkan ke portofolio.",
       education: {
         definition: "Single Index Model membagi return sekuritas ke dalam dua komponen: komponen return yang unik dan independen terhadap return pasar (αᵢ), dan komponen return yang berhubungan dengan return pasar (βᵢ).",
         formula: "rᵢ = αᵢ + βᵢ * rₘ + eᵢ",
@@ -68,7 +63,7 @@ export default function MethodPage({ setIsAnalysisModalOpen, setPreSelectedMetho
       },
       pros: [
         "Menghasilkan performa return tertinggi dengan Sharpe Ratio terbaik pada periode simulasi.",
-        "Sangat efektif mengidentifikasi saham yang mampu mengalahkan pergerakan pasar (alpha positif).",
+        "Sangat efektif mengidentifikasi saham yang mampu mengalahkan pergerakan pasar.",
         "Lebih ringkas dibandingkan proses kalkulasi korelasi Markowitz yang kompleks."
       ],
       cons: [
@@ -78,12 +73,10 @@ export default function MethodPage({ setIsAnalysisModalOpen, setPreSelectedMetho
     },
     CAPM: {
       title: "Capital Asset Pricing Model (CAPM)",
-      target: "Cocok untuk: Analisis Risiko Sistematis",
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-      ),
+      problem: "Ingin tahu apakah keuntungan sebanding dengan risiko?",
+      shortDesc: "CAPM (Capital Asset Pricing Model) — mengukur hubungan antara risiko saham dan potensi keuntungannya.",
       concept: "Menghubungkan tingkat return yang diharapkan dari suatu aset berisiko dengan risiko dari aset tersebut pada keadaan pasar yang seimbang.",
-      howItWorks: "CAPM mengukur hubungan antara risiko sistematis (beta) dan expected return. Model ini membantu menentukan apakah suatu saham memberikan kompensasi yang cukup atas risiko yang ditanggung investor, relatif terhadap return pasar dan risk-free rate.",
+      howItWorks: "CAPM mengukur hubungan antara risiko sistematis (beta) dan expected return. Model ini membantu menentukan apakah suatu saham memberikan kompensasi yang cukup atas risiko yang ditanggung investor.",
       education: {
         definition: "Capital Asset Pricing Model (CAPM) merupakan suatu model yang menghubungkan tingkat return yang diharapkan dari suatu aset berisiko dengan risiko dari aset tersebut pada keadaan pasar yang seimbang.",
         detail: "Konsep CAPM pada umumnya berguna untuk menguantifikasi hubungan antara risiko dan return.",
@@ -108,158 +101,171 @@ export default function MethodPage({ setIsAnalysisModalOpen, setPreSelectedMetho
     }
   };
 
-  const currentMethod = methodData[activeMethod];
-
   return (
     <div className="bg-white rounded-xl shadow-sm p-8 min-h-[85vh]">
-    <div className="flex flex-col gap-6 pb-10 w-full">
+      <div className="flex flex-col gap-8 w-full">
 
-      {/* 1. Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-smart-navy mb-2">Metode Portofolio</h1>
-        <p className="text-gray-500 text-sm">
-          Pelajari algoritma dan model matematis di balik rekomendasi SmartInvest.
-        </p>
-      </div>
-
-      {/* 2. Tab Navigation — melebar rata */}
-      <div className="flex w-full border-b border-gray-200 mt-2">
-        {['MVEP', 'SIM', 'CAPM'].map((methodKey) => (
-          <button
-            key={methodKey}
-            onClick={() => setActiveMethod(methodKey)}
-            className={`flex-1 pb-3 text-sm font-bold text-center transition-all border-b-2 -mb-[2px] ${
-              activeMethod === methodKey
-                ? 'text-smart-navy border-smart-navy'
-                : 'text-gray-400 border-transparent hover:text-gray-600'
-            }`}
-          >
-            {methodKey}
-          </button>
-        ))}
-      </div>
-
-      {/* 3. Konten Metode (Dibungkus dalam Card Elevated/Menonjol) */}
-      <div className="w-full bg-white p-8 rounded-3xl border border-gray-100 shadow-md flex flex-col gap-6 animate-fade-in mt-6 relative overflow-hidden">
-
-        {/* Aksen visual background transparan di pojok card agar tidak terlalu sepi */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-smart-navy opacity-[0.03] rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-
-        {/* Title & Target Area */}
-        <div className="flex items-center justify-between border-b border-gray-100 pb-5 relative z-10">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gray-50 text-smart-navy rounded-2xl flex items-center justify-center shadow-sm border border-gray-100">
-              {currentMethod.icon}
+        {/* ── HERO: Narasi Tentang Kami ── */}
+        <div className="w-full flex flex-col gap-1">
+          {/* Header Judul dengan Decorative Bar */}
+          <div className="mb-10 text-center">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-smart-navy">
+              Tiga Pilar Utama Analisis SmartInvest
+            </h1>
+            <br />
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="h-px w-12 bg-smart-navy/30"></div>
+              <span className="text-smart-navy/60 uppercase tracking-widest text-xs font-bold">***</span>
+              <div className="h-px w-12 bg-smart-navy/30"></div>
             </div>
-            <h2 className="text-2xl font-bold text-smart-navy">{currentMethod.title}</h2>
+          
           </div>
-          <div className="bg-gray-50 border border-gray-200 text-gray-600 text-xs font-bold px-4 py-2.5 rounded-xl">
-            {currentMethod.target}
-          </div>
+         
+          <p className="text-600 mb-2 leading-relaxed text-justify">
+            Di tengah gempuran informasi pasar modal, SmartInvest hadir sebagai platform investasi berbasis AI yang mempersonalisasi strategi untuk investor pemula. Kami mengubah cara Anda memandang investasi: dari yang semula membingungkan menjadi sebuah perjalanan yang sistematis, modern, dan penuh kendali. Kami memahami tantangan nyata yang sering dihadapi pemula—mulai dari kebingungan dalam menginterpretasikan chart, keraguan dalam menakar risiko, hingga kebimbangan dalam menentukan pemilihan saham yang tepat.
+          </p>
+          <p className="text-600 mb-2 leading-relaxed text-justify">
+            Sering kali, tantangan ini membuat investor pemula hanya menjadi pengikut tren yang berisiko tinggi. SmartInvest hadir untuk memutus rantai tersebut, membantu Anda bertransformasi dari sekadar pengikut tren menjadi investor cerdas yang paham sepenuhnya akan setiap langkah yang Anda ambil.
+          </p>
+          <p className="text-600 mb-2 leading-relaxed font-medium">
+            "SmartInvest membantu mengubah proses tersebut menjadi pengalaman investasi yang lebih mudah dipahami dan lebih nyaman digunakan."
+          </p>
+          <h3 className="text-lg font-semibold text-smart-navy mt-8">Pilih tantangan terbesarmu di bawah ini:</h3>
         </div>
 
-        {/* Konsep & Cara Kerja Area */}
-        <div className="bg-gray-50/80 rounded-2xl p-6 border border-gray-100 relative z-10">
-          <div className="mb-6">
-            <h3 className="text-sm font-bold text-smart-navy mb-2">Konsep Dasar</h3>
-            <p className="text-gray-600 font-medium italic text-sm">"{currentMethod.concept}"</p>
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-smart-navy mb-2">Cara Kerja Algoritma:</h3>
-            <p className="text-gray-500 text-sm leading-relaxed">{currentMethod.howItWorks}</p>
-          </div>
-        </div>
+        {/* ── PROBLEM-DRIVEN CARDS ── */}
+        <div className="flex flex-col gap-4 max-w-3xl mx-auto mb-12">
+          {Object.keys(methodData).map((key) => {
+            const method = methodData[key];
+            const isExpanded = expandedMethod === key;
+            return (
+              <div key={key} className="w-full bg-white border rounded-2xl shadow-sm overflow-hidden transition-all duration-300">
+                {/* Card Header (Clickable) */}
+                <div
+                  onClick={() => setExpandedMethod(isExpanded ? null : key)}
+                  className="cursor-pointer p-6 hover:bg-slate-50 transition-colors"
+                >
+                  <p className="font-bold text-smart-navy text-lg">{method.problem}</p>
+                  <p className="text-xs text-400 mt-1">{key} — klik untuk detail</p>
+                </div>
 
-        {/* Materi Edukasi */}
-        {currentMethod.education && (
-          <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 relative z-10">
-            <h3 className="text-sm font-bold text-smart-navy mb-3 flex items-center gap-2">
-              <span>📐</span> Dasar Matematis
-            </h3>
-            <p className="text-gray-600 text-sm leading-relaxed mb-3">{currentMethod.education.definition}</p>
-            {currentMethod.education.detail && (
-              <p className="text-gray-500 text-sm leading-relaxed mb-3">{currentMethod.education.detail}</p>
-            )}
-            {currentMethod.education.formula && (
-              <div className="bg-white rounded-xl px-4 py-3 border border-gray-200 font-mono text-sm text-smart-navy mb-3">
-                <p className="font-semibold">{currentMethod.education.formula}</p>
-                {currentMethod.education.formulaDesc && (
-                  <p className="text-xs text-gray-400 mt-1">{currentMethod.education.formulaDesc}</p>
-                )}
-              </div>
-            )}
-            {currentMethod.education.betaFormula && (
-              <div className="bg-white rounded-xl px-4 py-3 border border-gray-200 font-mono text-sm text-smart-navy mb-3">
-                <p className="font-semibold">{currentMethod.education.betaFormula}</p>
-              </div>
-            )}
-            {currentMethod.education.expectedReturn && (
-              <div className="bg-white rounded-xl px-4 py-3 border border-gray-200 font-mono text-sm text-smart-navy mb-3">
-                <p className="text-xs text-gray-400 mb-1">Ekspektasi Return:</p>
-                <p className="font-semibold">{currentMethod.education.expectedReturn}</p>
-              </div>
-            )}
-            {currentMethod.education.variables && (
-              <div className="mt-3">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Keterangan Variabel:</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                  {currentMethod.education.variables.map((v) => (
-                    <div key={v.symbol} className="flex items-start gap-2 text-xs text-gray-600">
-                      <span className="font-mono font-bold text-smart-navy bg-white px-1.5 py-0.5 rounded border border-gray-200 shrink-0">{v.symbol}</span>
-                      <span>{v.desc}</span>
+                {/* Card Body (Collapsible) */}
+                <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                  <div className="overflow-hidden">
+                    <div className="px-6 pb-6">
+                      <p className="text-blue-600 font-medium mb-4 text-sm">{method.shortDesc}</p>
+
+                      {/* Konsep */}
+                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 mb-4">
+                        <p className="text-xs font-bold text-400 uppercase tracking-wide mb-1">Konsep Dasar</p>
+                        <p className="text-gray-600 text-sm italic">"{method.concept}"</p>
+                      </div>
+
+                      {/* Rumus */}
+                      {method.education && (
+                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 mb-4">
+                          <p className="text-xs font-bold text-400 uppercase tracking-wide mb-2">📐 Dasar Matematis</p>
+                          <p className="text-600 text-xs leading-relaxed mb-2">{method.education.definition}</p>
+                          {method.education.formula && (
+                            <div className="bg-white rounded-lg px-3 py-2 border border-gray-200 font-mono text-xs text-smart-navy mb-2">
+                              <p className="font-semibold">{method.education.formula}</p>
+                              {method.education.formulaDesc && <p className="text-gray-400 mt-0.5">{method.education.formulaDesc}</p>}
+                            </div>
+                          )}
+                          {method.education.betaFormula && (
+                            <div className="bg-white rounded-lg px-3 py-2 border border-gray-200 font-mono text-xs text-smart-navy mb-2">
+                              <p className="font-semibold">{method.education.betaFormula}</p>
+                            </div>
+                          )}
+                          {method.education.expectedReturn && (
+                            <div className="bg-white rounded-lg px-3 py-2 border border-gray-200 font-mono text-xs text-smart-navy mb-2">
+                              <p className="text-400 text-[10px] mb-0.5">Ekspektasi Return:</p>
+                              <p className="font-semibold">{method.education.expectedReturn}</p>
+                            </div>
+                          )}
+                          {method.education.variables && (
+                            <div className="mt-2 space-y-1">
+                              {method.education.variables.map((v) => (
+                                <div key={v.symbol} className="flex items-start gap-2 text-[11px] text-gray-600">
+                                  <span className="font-mono font-bold text-smart-navy bg-white px-1 py-0.5 rounded border border-gray-200 shrink-0">{v.symbol}</span>
+                                  <span>{v.desc}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Kelebihan & Kekurangan */}
+                      <div className="grid grid-cols-1 gap-3 mb-4">
+                        <div className="border border-green-100 bg-green-50/50 rounded-xl p-3">
+                          <p className="text-xs font-bold text-green-600 mb-2">✓ Kelebihan</p>
+                          <ul className="space-y-1">
+                            {method.pros.map((pro, i) => (
+                              <li key={i} className="text-xs text-600 leading-relaxed">• {pro}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="border border-red-100 bg-red-50/50 rounded-xl p-3">
+                          <p className="text-xs font-bold text-red-500 mb-2">✗ Kekurangan</p>
+                          <ul className="space-y-1">
+                            {method.cons.map((con, i) => (
+                              <li key={i} className="text-xs text-600 leading-relaxed">• {con}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+
+                      {/* Tombol Simulasi */}
+                      <button
+                        onClick={() => handleSimulate(key)}
+                        className="w-full bg-smart-navy text-white py-3 rounded-xl font-bold text-sm hover:opacity-90 transition-opacity mt-2"
+                      >
+                        Simulasikan Metode Ini
+                      </button>
                     </div>
-                  ))}
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
-        )}
-
-        {/* Kelebihan & Kekurangan Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full relative z-10">
-
-          {/* Box Kelebihan */}
-          <div className="border border-green-100 bg-green-50/50 rounded-2xl p-6">
-            <h3 className="text-sm font-bold text-green-600 mb-4 flex items-center gap-2">
-              <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" className="text-green-600"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
-              </div>
-              Kelebihan
-            </h3>
-            <ul className="list-disc list-inside text-gray-600 text-sm space-y-2.5">
-              {currentMethod.pros.map((pro, index) => (
-                <li key={index} className="leading-relaxed">{pro}</li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Box Kekurangan */}
-          <div className="border border-red-100 bg-red-50/50 rounded-2xl p-6">
-            <h3 className="text-sm font-bold text-red-500 mb-4 flex items-center gap-2">
-              <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-              </div>
-              Kekurangan
-            </h3>
-            <ul className="list-disc list-inside text-gray-600 text-sm space-y-2.5">
-              {currentMethod.cons.map((con, index) => (
-                <li key={index} className="leading-relaxed">{con}</li>
-              ))}
-            </ul>
-          </div>
-
+            );
+          })}
         </div>
 
-        {/* Action Button */}
-        <div className="mt-2 relative z-10 flex justify-end">
-          <button onClick={() => handleSimulate(activeMethod)} className="bg-smart-navy text-white px-7 py-3.5 rounded-xl font-bold text-sm hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2">
-            Simulasikan dengan {activeMethod}
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-          </button>
+        {/* ── FOOTER: Yang Bisa SmartInvest Bantu ── */}
+        <div className="bg-slate-50 rounded-2xl p-8 border border-slate-200">
+          <h4 className="text-sm font-bold text-500 mb-4 tracking-wider uppercase">YANG BISA SMARTINVEST BANTU</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
+            {[
+              "Menganalisis performa saham",
+              "Menghitung risiko dan potensi return",
+              "Memprediksi tren pasar",
+              "Memperoleh rekomendasi portofolio optimal secara otomatis"
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm text-600">
+                <span className="text-green-500 font-bold">✓</span>
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+
+          <hr className="border-slate-200 mb-8" />
+
+          <p className="text-600 mb-4 leading-relaxed">
+            Setiap analisis dirancang dengan tampilan yang interaktif, intuitif, dan beginner-friendly agar pengguna dapat memahami proses investasi tanpa harus memiliki latar belakang finansial atau data science.
+          </p>
+          <p className="text-600 mb-4 leading-relaxed font-medium">
+            SmartInvest bukan hanya tempat melakukan perhitungan investasi. SmartInvest adalah tempat untuk belajar memahami pasar, mengenali risiko, dan membangun keputusan finansial yang lebih cerdas berbasis data.
+          </p>
+          <p className="text-500 italic mb-4 leading-relaxed">
+            Karena investasi yang baik bukan tentang ikut-ikutan. Investasi yang baik dimulai dari keputusan yang dipahami dengan baik.
+          </p>
+
+          <p className="text-xl font-bold text-smart-navy text-center mt-8">
+            Analyze smarter. Invest better. Grow confidently. 🚀
+          </p>
         </div>
 
       </div>
-    </div>
     </div>
   );
 }
