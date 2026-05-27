@@ -20,80 +20,136 @@ export default function AnalysisPage({
   const fmtRupiah = (val) =>
     val != null ? "Rp " + Number(val).toLocaleString("id-ID") : "Rp 0";
 
-  // Helper: Parse GenAI text into styled sections
+  // Helper: Parse GenAI text into styled sections (premium rendering)
   const renderGenAISections = (text) => {
     if (!text) return null;
-    const lines = text.split('\n');
-    const sections = [];
-    let currentSection = { lines: [] };
 
-    lines.forEach((line) => {
-      const trimmed = line.trim();
-      if (
-        (trimmed.match(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u) && trimmed.length > 3 && !trimmed.startsWith('👉') && !trimmed.startsWith('⚠️')) ||
-        trimmed.startsWith('## ') ||
-        (trimmed.startsWith('**') && trimmed.endsWith('**'))
-      ) {
-        if (currentSection.lines.length > 0) {
-          sections.push(currentSection);
+    const lines = text.split("\n").map(l => l.trim());
+    
+    const paragraphs = [];
+    const stocks = [];
+    const tips = [];
+    const disclaimer = [];
+
+    let currentCategory = "intro";
+
+    lines.forEach(line => {
+      if (line.startsWith("👋") || line.toLowerCase().includes("hallo sobat")) {
+        paragraphs.push(line);
+        return;
+      }
+      if (line.includes("━━━━━━━━━━━━━━━━━━")) {
+        return;
+      }
+      if (line.includes("KOMPOSISI PORTOFOLIO") || line.includes("DATA PORTOFOLIO") || line.includes("Detail saham") || line.includes("KOMPOSISI PORTOFOLIO")) {
+        currentCategory = "stocks";
+        return;
+      }
+      if (line.includes("Strategi") || line.includes("💡") || line.includes("tips") || line.includes("Strategi yang Bisa")) {
+        currentCategory = "tips";
+        return;
+      }
+      if (line.startsWith("⚠️") || line.includes("proyeksi berdasarkan") || line.includes("jaminan keuntungan") || line.includes("Analisis ini merupakan proyeksi")) {
+        disclaimer.push(line.replace("⚠️", "").trim());
+        return;
+      }
+
+      if (line.startsWith("👉")) {
+        tips.push(line.replace("👉", "").trim());
+      } else if (line.startsWith("*") || line.startsWith("-")) {
+        const cleanLine = line.replace(/^[\*\-\u2022]\s*/, "").trim();
+        if (currentCategory === "stocks") {
+          stocks.push(cleanLine);
+        } else if (currentCategory === "tips") {
+          tips.push(cleanLine);
+        } else {
+          paragraphs.push(line);
         }
-        currentSection = { header: trimmed.replace(/^##\s*/, '').replace(/\*\*/g, ''), lines: [] };
-      } else if (trimmed.length > 0) {
-        currentSection.lines.push(trimmed);
+      } else if (line.length > 0) {
+        paragraphs.push(line);
       }
     });
-    if (currentSection.lines.length > 0 || currentSection.header) {
-      sections.push(currentSection);
-    }
 
-    return sections.map((section, idx) => {
-      const isTips = section.lines.some(l => l.startsWith('👉'));
-      const isWarning = section.lines.some(l => l.startsWith('⚠️'));
+    const hasShortSelling = text.toLowerCase().includes("short selling") || text.toLowerCase().includes("negatif");
 
-      return (
-        <div key={idx} className={`rounded-xl p-4 ${
-          isWarning ? 'bg-amber-50/60 border border-amber-200/50' :
-          isTips ? 'bg-emerald-50/40 border border-emerald-100/60' :
-          idx === 0 ? 'bg-gradient-to-r from-blue-50/60 to-indigo-50/40 border border-blue-100/50' :
-          'bg-gray-50/50 border border-gray-100/60'
-        }`}>
-          {section.header && (
-            <p className={`font-bold text-sm mb-2 ${
-              isWarning ? 'text-amber-700' :
-              isTips ? 'text-emerald-700' :
-              'text-smart-navy'
-            }`}>{section.header}</p>
-          )}
-          {section.lines.map((line, li) => {
-            if (line.startsWith('👉')) {
-              return (
-                <div key={li} className="flex items-start gap-2 py-1.5">
-                  <span className="text-sm shrink-0">👉</span>
-                  <span className="text-sm text-gray-700 leading-relaxed">{line.replace('👉', '').trim()}</span>
+    return (
+      <div className="flex flex-col gap-6 w-full text-slate-700">
+        {/* Welcome / Greeting Card */}
+        {paragraphs.length > 0 && (
+          <div className="bg-gradient-to-r from-blue-50/70 to-indigo-50/50 border border-blue-100/60 rounded-2xl p-6 shadow-sm">
+            <h4 className="text-lg font-black text-smart-navy mb-3 flex items-center gap-2">
+              <span className="animate-waving-hand text-xl">👋</span> Hallo Sobat SmartInvest!
+            </h4>
+            <div className="flex flex-col gap-3">
+              {paragraphs.slice(1).map((p, i) => (
+                <p key={i} className="text-sm text-slate-600 leading-relaxed font-medium">
+                  {p.replace(/\*\*/g, "").replace("👋 Hallo Sobat SmartInvest!", "")}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Short Selling Warning Badge */}
+        {hasShortSelling && (
+          <div className="bg-red-50/40 border border-red-100 rounded-2xl p-6 shadow-sm">
+            <p className="text-xs font-bold text-red-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <span>⚠️</span> Alokasi Bobot Negatif (Short Selling) Terdeteksi
+            </p>
+            <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+              Portofolio Anda mengizinkan strategi **short selling** (bobot negatif) pada saham tertentu. Strategi ini memproyeksikan keuntungan ketika harga saham turun, namun memiliki tingkat risiko volatilitas yang jauh lebih tinggi dan memerlukan pengawasan aktif. Cocok untuk investor berpengalaman.
+            </p>
+          </div>
+        )}
+
+        {/* Bespoked Stock details overview */}
+        {stocks.length > 0 && (
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">🔍 STRUKTUR DETIL PORTOFOLIO</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {stocks.map((s, i) => (
+                <div key={i} className="bg-slate-50 border border-slate-100 rounded-xl p-4 hover:border-slate-200 transition-colors">
+                  <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+                    {s.replace(/\*\*/g, "")}
+                  </p>
                 </div>
-              );
-            }
-            if (line.startsWith('⚠️')) {
-              return (
-                <div key={li} className="flex items-start gap-2 py-1">
-                  <span className="text-sm shrink-0">⚠️</span>
-                  <span className="text-xs text-amber-700 leading-relaxed font-medium">{line.replace('⚠️', '').trim()}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Actionable Tips Card */}
+        {tips.length > 0 && (
+          <div className="bg-emerald-50/20 border border-emerald-100/60 rounded-2xl p-6 shadow-sm">
+            <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+              <span>💡</span> Rencana Aksi & Strategi Portofolio
+            </p>
+            <div className="flex flex-col gap-3">
+              {tips.map((t, i) => (
+                <div key={i} className="flex items-start gap-3 bg-white/60 border border-white rounded-xl p-3 shadow-inner">
+                  <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
+                    ✓
+                  </div>
+                  <p className="text-xs text-slate-700 leading-relaxed font-semibold">
+                    {t}
+                  </p>
                 </div>
-              );
-            }
-            if (line.startsWith('- ') || line.startsWith('• ')) {
-              return (
-                <div key={li} className="flex items-start gap-2 py-0.5 pl-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-smart-green shrink-0 mt-1.5"></span>
-                  <span className="text-sm text-gray-700 leading-relaxed">{line.replace(/^[-•]\s*/, '').trim()}</span>
-                </div>
-              );
-            }
-            return <p key={li} className="text-sm text-gray-600 leading-relaxed mb-1">{line}</p>;
-          })}
-        </div>
-      );
-    });
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Alert Disclaimer */}
+        {disclaimer.length > 0 && (
+          <div className="bg-amber-50/60 border border-amber-200/50 rounded-xl p-4 flex items-start gap-3">
+            <span className="text-sm shrink-0">⚠️</span>
+            <p className="text-xs text-amber-800 leading-relaxed font-semibold">
+              {disclaimer.join(" ")}
+            </p>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (

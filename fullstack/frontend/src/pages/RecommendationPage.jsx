@@ -45,77 +45,195 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
   // Helper: Parse GenAI text into styled sections (premium rendering)
   const renderGenAISections = (text) => {
     if (!text) return null;
-    const lines = text.split('\n');
-    const sections = [];
-    let currentSection = { lines: [] };
 
-    lines.forEach((line) => {
-      const trimmed = line.trim();
-      if (
-        (trimmed.match(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u) && trimmed.length > 3 && !trimmed.startsWith('\ud83d\udc49') && !trimmed.startsWith('\u26a0\ufe0f')) ||
-        trimmed.startsWith('## ') ||
-        (trimmed.startsWith('**') && trimmed.endsWith('**'))
-      ) {
-        if (currentSection.lines.length > 0) {
-          sections.push(currentSection);
-        }
-        currentSection = { header: trimmed.replace(/^##\s*/, '').replace(/\*\*/g, ''), lines: [] };
-      } else if (trimmed.length > 0) {
-        currentSection.lines.push(trimmed);
+    const lines = text.split("\n").map(l => l.trim());
+    
+    const metrics = [];
+    let expectedReturn = "";
+    let risiko = "";
+    let sharpe = "";
+    let gain = "";
+    let loss = "";
+
+    lines.forEach(line => {
+      if (line.includes("Expected Return:") || line.includes("Expected Return")) {
+        expectedReturn = line.split(":")[1]?.trim() || "";
+      } else if (line.includes("Risiko:") || line.includes("Risiko")) {
+        risiko = line.split(":")[1]?.trim() || "";
+      } else if (line.includes("Sharpe Ratio:") || line.includes("Sharpe Ratio")) {
+        sharpe = line.split(":")[1]?.trim() || "";
+      } else if (line.toLowerCase().includes("potensi untung") || line.toLowerCase().includes("potensi naik")) {
+        gain = line.replace(/potensi untung|potensi naik|\+Rp|\+/gi, "").trim();
+      } else if (line.toLowerCase().includes("potensi turun")) {
+        loss = line.replace(/potensi turun|\-Rp|\-/gi, "").trim();
       }
     });
-    if (currentSection.lines.length > 0 || currentSection.header) {
-      sections.push(currentSection);
-    }
 
-    return sections.map((section, idx) => {
-      const isTips = section.lines.some(l => l.startsWith('\ud83d\udc49'));
-      const isWarning = section.lines.some(l => l.startsWith('\u26a0\ufe0f'));
+    const paragraphs = [];
+    const terms = [];
+    const tips = [];
+    const disclaimer = [];
 
-      return (
-        <div key={idx} className={`rounded-xl p-4 ${
-          isWarning ? 'bg-amber-50/60 border border-amber-200/50' :
-          isTips ? 'bg-emerald-50/40 border border-emerald-100/60' :
-          idx === 0 ? 'bg-gradient-to-r from-blue-50/60 to-indigo-50/40 border border-blue-100/50' :
-          'bg-gray-50/50 border border-gray-100/60'
-        }`}>
-          {section.header && (
-            <p className={`font-bold text-sm mb-2 ${
-              isWarning ? 'text-amber-700' :
-              isTips ? 'text-emerald-700' :
-              'text-smart-navy'
-            }`}>{section.header}</p>
-          )}
-          {section.lines.map((line, li) => {
-            if (line.startsWith('\ud83d\udc49')) {
-              return (
-                <div key={li} className="flex items-start gap-2 py-1.5">
-                  <span className="text-sm shrink-0">{'\ud83d\udc49'}</span>
-                  <span className="text-sm text-gray-700 leading-relaxed">{line.replace('\ud83d\udc49', '').trim()}</span>
-                </div>
-              );
-            }
-            if (line.startsWith('\u26a0\ufe0f')) {
-              return (
-                <div key={li} className="flex items-start gap-2 py-1">
-                  <span className="text-sm shrink-0">{'\u26a0\ufe0f'}</span>
-                  <span className="text-xs text-amber-700 leading-relaxed font-medium">{line.replace('\u26a0\ufe0f', '').trim()}</span>
-                </div>
-              );
-            }
-            if (line.startsWith('- ') || line.startsWith('\u2022 ')) {
-              return (
-                <div key={li} className="flex items-start gap-2 py-0.5 pl-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-smart-green shrink-0 mt-1.5"></span>
-                  <span className="text-sm text-gray-700 leading-relaxed">{line.replace(/^[-\u2022]\s*/, '').trim()}</span>
-                </div>
-              );
-            }
-            return <p key={li} className="text-sm text-gray-600 leading-relaxed mb-1">{line}</p>;
-          })}
-        </div>
-      );
+    let currentCategory = "intro";
+
+    lines.forEach(line => {
+      if (line.startsWith("👋") || line.toLowerCase().includes("hallo sobat")) {
+        paragraphs.push(line);
+        return;
+      }
+      if (line.includes("━━━━━━━━━━━━━━━━━━")) {
+        return;
+      }
+      if (line.includes("DATA PENTING") || line.includes("HASIL PORTOFOLIO") || line.includes("DATA ANALISIS") || line.includes("DATA PENTING")) {
+        currentCategory = "metrics";
+        return;
+      }
+      if (line.includes("ISTILAH INVESTASI") || line.includes("🎯") || line.includes("Jelaskan arti istilah") || line.includes("Penjelasan istilah")) {
+        currentCategory = "terms";
+        return;
+      }
+      if (line.includes("tips") || line.includes("💡") || line.includes("Strategi") || line.includes("Beberapa tips")) {
+        currentCategory = "tips";
+        return;
+      }
+      if (line.startsWith("⚠️") || line.includes("jaminan keuntungan") || line.includes("proyeksi berdasarkan")) {
+        disclaimer.push(line.replace("⚠️", "").trim());
+        return;
+      }
+
+      if (line.startsWith("👉")) {
+        tips.push(line.replace("👉", "").trim());
+      } else if (line.startsWith("*") || line.startsWith("-")) {
+        const cleanLine = line.replace(/^[\*\-\u2022]\s*/, "").trim();
+        if (currentCategory === "terms") {
+          const parts = cleanLine.split(":");
+          if (parts.length >= 2) {
+            terms.push({
+              name: parts[0].replace(/\*\*/g, "").trim(),
+              description: parts.slice(1).join(":").trim()
+            });
+          } else {
+            terms.push({ name: "Istilah", description: cleanLine });
+          }
+        } else if (currentCategory === "tips") {
+          tips.push(cleanLine);
+        } else {
+          paragraphs.push(line);
+        }
+      } else if (line.length > 0) {
+        if (line.includes("Expected Return") || line.includes("Risiko") || line.includes("Sharpe Ratio") || line.includes("potensi untung") || line.includes("potensi turun")) {
+          return;
+        }
+        paragraphs.push(line);
+      }
     });
+
+    return (
+      <div className="flex flex-col gap-6 w-full text-slate-700">
+        {/* Welcome / Greeting Banner */}
+        {paragraphs.length > 0 && (
+          <div className="bg-gradient-to-r from-blue-50/70 to-indigo-50/50 border border-blue-100/60 rounded-2xl p-6 shadow-sm">
+            <h4 className="text-lg font-black text-smart-navy mb-3 flex items-center gap-2">
+              <span className="animate-waving-hand text-xl">👋</span> Hallo Sobat SmartInvest!
+            </h4>
+            <div className="flex flex-col gap-3">
+              {paragraphs.slice(1).map((p, i) => (
+                <p key={i} className="text-sm text-slate-600 leading-relaxed font-medium">
+                  {p.replace(/\*\*/g, "").replace("👋 Hallo Sobat SmartInvest!", "")}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Premium Metrics Grid Card */}
+        {expectedReturn && (
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">🏆 METRIK PORTOFOLIO TERBAIK</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-4 text-center">
+                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide mb-1">Expected Return</p>
+                <p className="text-xl font-black text-emerald-600">{expectedReturn}</p>
+              </div>
+              <div className="bg-rose-50/50 border border-rose-100 rounded-xl p-4 text-center">
+                <p className="text-[10px] font-bold text-rose-600 uppercase tracking-wide mb-1">Risiko Tahunan</p>
+                <p className="text-xl font-black text-rose-600">{risiko}</p>
+              </div>
+              <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 text-center">
+                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wide mb-1">Sharpe Ratio</p>
+                <p className="text-xl font-black text-smart-navy">{sharpe}</p>
+              </div>
+            </div>
+            {(gain || loss) && (
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2 text-center">Estimasi Keuntungan & Risiko (Modal Investasi Rp10.000.000)</p>
+                <div className="grid grid-cols-2 gap-4 text-center">
+                   <div className="border-r border-slate-200">
+                     <p className="text-xs font-bold text-gray-500 mb-0.5">Potensi Untung</p>
+                     <p className="text-sm font-black text-emerald-600">+{gain}</p>
+                   </div>
+                   <div>
+                     <p className="text-xs font-bold text-gray-500 mb-0.5">Potensi Rugi</p>
+                     <p className="text-sm font-black text-rose-500">-{loss}</p>
+                   </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Glossary FAQ Grid */}
+        {terms.length > 0 && (
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">📖 GLOSARIUM PINTAR FINANSIAL</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {terms.map((t, i) => (
+                <div key={i} className="bg-slate-50 border border-slate-100 rounded-xl p-4 hover:border-slate-200 transition-colors">
+                  <p className="text-xs font-bold text-smart-navy mb-1 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    {t.name}
+                  </p>
+                  <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                    {t.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Actionable Tips Card */}
+        {tips.length > 0 && (
+          <div className="bg-emerald-50/20 border border-emerald-100/60 rounded-2xl p-6 shadow-sm">
+            <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+              <span>💡</span> Tips Penting Rekomendasi
+            </p>
+            <div className="flex flex-col gap-3">
+              {tips.map((t, i) => (
+                <div key={i} className="flex items-start gap-3 bg-white/60 border border-white rounded-xl p-3 shadow-inner">
+                  <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
+                    ✓
+                  </div>
+                  <p className="text-xs text-slate-700 leading-relaxed font-semibold">
+                    {t}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Alert Disclaimer */}
+        {disclaimer.length > 0 && (
+          <div className="bg-amber-50/60 border border-amber-200/50 rounded-xl p-4 flex items-start gap-3">
+            <span className="text-sm shrink-0">⚠️</span>
+            <p className="text-xs text-amber-800 leading-relaxed font-semibold">
+              {disclaimer.join(" ")}
+            </p>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -131,9 +249,6 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
               iData?.ihsg_analysis?.market_trend === "Bullish" ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300"
             }`}>
               Market Sentiment: {iData?.ihsg_analysis?.market_trend || "N/A"}
-            </span>
-            <span className="inline-flex items-center gap-1 bg-white/10 text-blue-200 text-[10px] font-bold uppercase tracking-wide px-3 py-1 rounded-full border border-white/5">
-              Confidence: {fmtPersen(iData?.ihsg_analysis?.confidence)}
             </span>
           </div>
         </div>
