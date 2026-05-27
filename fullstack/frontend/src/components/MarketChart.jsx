@@ -26,7 +26,6 @@ function safeNum(v) {
   const n = Number(v);
   return isFinite(n) && n !== 0 ? n : null;
 }
-;
 function safePos(v) {
   const n = Number(v);
   return isFinite(n) && n > 0 ? n : null;
@@ -444,44 +443,37 @@ function LineChart({ series, loading, isPositive, range }) {
 }
 
 /* ── OHLC Data Grid ─────────────────────────────────────────────────── */
+
 function OHLCGrid({ quote, loading }) {
   const up = (quote?.pct ?? 0) >= 0;
 
+  // Diatur ulang menjadi 2 Baris x 3 Kolom agar padat berisi
   const rows = [
     [
       { label: "Open", value: fmt(quote?.open, 2), color: "text-gray-800" },
+      { label: "High", value: fmt(quote?.high, 2), color: "text-emerald-600" },
+      { label: "Low", value: fmt(quote?.low, 2), color: "text-red-500" },
+    ],
+    [
       {
         label: "Prev Close",
         value: fmt(quote?.prev, 2),
         color: "text-amber-600",
       },
       {
-        label: "Change",
-        value:
-          quote?.pct != null
-            ? `${quote.pct >= 0 ? "+" : ""}${fmt(Math.abs(quote.pct), 2)}%`
-            : "—",
-        color: up ? "text-emerald-600" : "text-red-500",
-      },
-    ],
-    [
-      { label: "High", value: fmt(quote?.high, 2), color: "text-emerald-600" },
-      { label: "Low", value: fmt(quote?.low, 2), color: "text-red-500" },
-      {
-        label: "Market Cap",
-        value: quote?.marketCap != null ? fmtK(quote.marketCap) : "—",
-        color: "text-gray-800",
-      },
-    ],
-    [
-      {
         label: "Volume",
         value:
           quote?.volume != null && quote.volume > 0 ? fmtK(quote.volume) : "—",
         color: "text-gray-800",
       },
-      { label: "Value", value: "—", color: "text-gray-800" },
-      { label: "Frekuensi", value: "—", color: "text-gray-800" },
+      {
+        label: "Change",
+        value:
+          quote?.change != null
+            ? `${quote.change >= 0 ? "+" : ""}${fmt(quote.change, 2)}`
+            : "—",
+        color: up ? "text-emerald-600" : "text-red-500",
+      },
     ],
   ];
 
@@ -525,11 +517,14 @@ function OHLCGrid({ quote, loading }) {
           </div>
         ))}
       </div>
-      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">Tabel data yang merangkum pergerakan harga pasar: harga pembukaan (Open), nilai tertinggi (High), terendah (Low), penutupan sebelumnya (Prev Close), serta persentase perubahan (Change).</p>
+      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">
+        Tabel data yang merangkum pergerakan harga pasar: harga pembukaan
+        (Open), nilai tertinggi (High), terendah (Low), penutupan sebelumnya
+        (Prev Close), serta nilai perubahan absolute harian (Change).
+      </p>
     </div>
   );
 }
-
 /* ── Index Performance horizontal bars ──────────────────────────────── */
 function IndexPerformance({ perfs, loading }) {
   const vals = perfs ? Object.values(perfs).map((v) => Math.abs(v ?? 0)) : [];
@@ -586,7 +581,11 @@ function IndexPerformance({ perfs, loading }) {
           );
         })}
       </div>
-      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">Grafik batang horizontal yang menunjukkan persentase naik-turunnya performa indeks dalam berbagai periode waktu (1D, 1W, 1M, 3M, YTD, 1Y, 5Y). Bar merah = negatif, bar hijau = positif.</p>
+      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">
+        Grafik batang horizontal yang menunjukkan persentase naik-turunnya
+        performa indeks dalam berbagai periode waktu (1D, 1W, 1M, 3M, YTD, 1Y,
+        5Y). Bar merah = negatif, bar hijau = positif.
+      </p>
     </div>
   );
 }
@@ -656,7 +655,11 @@ function LowHighRange({ ranges, currentPrice, loading }) {
           );
         })}
       </div>
-      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">Indikator visual posisi nilai saat ini di antara batas terendah (Low) dan tertinggi (High) pada berbagai rentang waktu. Panah kecil menandai posisi harga saat ini.</p>
+      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">
+        Indikator visual posisi nilai saat ini di antara batas terendah (Low)
+        dan tertinggi (High) pada berbagai rentang waktu. Panah kecil menandai
+        posisi harga saat ini.
+      </p>
     </div>
   );
 }
@@ -765,7 +768,10 @@ function IndexDiary({ diary, loading }) {
           </tbody>
         </table>
       </div>
-      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">Kalender riwayat performa pasar berdasarkan bulan dan hari perdagangan. Warna hijau = kenaikan, merah = penurunan (heatmap visual).</p>
+      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">
+        Kalender riwayat performa pasar berdasarkan bulan dan hari perdagangan.
+        Warna hijau = kenaikan, merah = penurunan (heatmap visual).
+      </p>
     </div>
   );
 }
@@ -791,7 +797,9 @@ export default function MarketChart() {
       );
       if (!res.ok) {
         const message = await res.text();
-        throw new Error(`Yahoo proxy fetch failed: ${res.status} ${res.statusText} - ${message}`);
+        throw new Error(
+          `Yahoo proxy fetch failed: ${res.status} ${res.statusText} - ${message}`,
+        );
       }
       const data = await res.json();
 
@@ -1020,7 +1028,11 @@ export default function MarketChart() {
         />
       </div>
 
-      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">IHSG (Indeks Harga Saham Gabungan) adalah indeks utama Bursa Efek Indonesia yang mencerminkan pergerakan harga seluruh saham tercatat. Data di atas diperbarui secara real-time dari Yahoo Finance.</p>
+      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">
+        IHSG (Indeks Harga Saham Gabungan) adalah indeks utama Bursa Efek
+        Indonesia yang mencerminkan pergerakan harga seluruh saham tercatat.
+        Data di atas diperbarui secara real-time dari Yahoo Finance.
+      </p>
 
       <OHLCGrid quote={quote} loading={chartLoading} />
       <IndexPerformance perfs={perfs} loading={perfLoading} />

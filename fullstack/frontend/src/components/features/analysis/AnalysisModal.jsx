@@ -67,19 +67,19 @@ export default function AnalysisModal({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-const handleQuickSelect = (months) => {
+  const handleQuickSelect = (months) => {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - months);
 
-    const formatDate = (date) => date.toISOString().split('T')[0];
+    const formatDate = (date) => date.toISOString().split("T")[0];
 
     setFormData((prev) => ({
       ...prev,
       start_date: formatDate(startDate),
       end_date: formatDate(endDate),
     }));
-    
+
     // Opsional: hapus error jika user klik tombol cepat
     setErrors((prev) => ({ ...prev, start_date: null, end_date: null }));
   };
@@ -189,7 +189,6 @@ const handleQuickSelect = (months) => {
 
   if (!isOpen) return null;
 
-
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-smart-navy/60 backdrop-blur-sm p-6"
@@ -273,7 +272,7 @@ const handleQuickSelect = (months) => {
                   value={formData.start_date}
                   onChange={handleChange("start_date")}
                   min="2018-01-01"
-                  max="2026-05-19"
+                  max={new Date().toISOString().split("T")[0]}
                   disabled={isLoading}
                   className="bg-transparent text-xs font-bold text-smart-navy outline-none border-b border-gray-200 pb-1"
                 />
@@ -287,34 +286,38 @@ const handleQuickSelect = (months) => {
                   value={formData.end_date}
                   onChange={handleChange("end_date")}
                   min="2018-01-01"
-                  max="2026-05-19"
+                  max={new Date().toISOString().split("T")[0]}
                   disabled={isLoading}
                   className="bg-transparent text-xs font-bold text-smart-navy outline-none border-b border-gray-200 pb-1"
                 />
               </div>
             </div>
             {/* radio button */}
-           <div className="flex gap-4 mt-3 px-1">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="period"
-                className="accent-smart-navy h-4 w-4"
-                onChange={() => handleQuickSelect(6)}
-              />
-              <span className="text-[10px] font-bold text-gray-500">6 Bulan</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="period"
-                className="accent-smart-navy h-4 w-4"
-                onChange={() => handleQuickSelect(12)}
-              />
-              <span className="text-[10px] font-bold text-gray-500">1 Tahun</span>
-            </label>
+            <div className="flex gap-4 mt-3 px-1">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="period"
+                  className="accent-smart-navy h-4 w-4"
+                  onChange={() => handleQuickSelect(6)}
+                />
+                <span className="text-[10px] font-bold text-gray-500">
+                  6 Bulan
+                </span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="period"
+                  className="accent-smart-navy h-4 w-4"
+                  onChange={() => handleQuickSelect(12)}
+                />
+                <span className="text-[10px] font-bold text-gray-500">
+                  1 Tahun
+                </span>
+              </label>
+            </div>
           </div>
-        </div>
 
           {/* Investment Amount */}
           <div

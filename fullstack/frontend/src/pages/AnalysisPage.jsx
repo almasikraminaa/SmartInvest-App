@@ -29,11 +29,10 @@ export default function AnalysisPage({
 
     lines.forEach((line) => {
       const trimmed = line.trim();
-      // Detect section headers (lines with emoji at start + bold-like text)
       if (
         (trimmed.match(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u) && trimmed.length > 3 && !trimmed.startsWith('👉') && !trimmed.startsWith('⚠️')) ||
         trimmed.startsWith('## ') ||
-        trimmed.startsWith('**') && trimmed.endsWith('**')
+        (trimmed.startsWith('**') && trimmed.endsWith('**'))
       ) {
         if (currentSection.lines.length > 0) {
           sections.push(currentSection);
@@ -97,21 +96,6 @@ export default function AnalysisPage({
     });
   };
 
-  // ── HITUNG TOTAL SECARA DINAMIS UNTUK BAGIAN FOOTER TABEL ──
-  const totalWeight =
-    pData?.portfolio?.reduce((sum, stock) => sum + (stock.weight || 0), 0) || 0;
-  const totalAllocation =
-    pData?.portfolio?.reduce(
-      (sum, stock) => sum + (stock.allocation || 0),
-      0,
-    ) || 0;
-
-  const initialAmount =
-    iData?.investment_simulation?.initial_amount ||
-    metaForm?.investment_amount ||
-    0;
-  const sisaDanaTunai = initialAmount - totalAllocation;
-
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 min-h-[85vh]">
       <main className="w-full mx-auto flex flex-col gap-6">
@@ -121,9 +105,8 @@ export default function AnalysisPage({
             <h1 className="text-2xl font-bold text-smart-navy">
               Analisis Kuantitatif Portofolio & IHSG
             </h1>
-            <p className="text-400 text-sm mt-0.5">
-              Sinkronisasi Alokasi Kuantitatif Terpilih dengan Prediksi Arah AI
-              Makro bursa.
+            <p className="text-gray-400 text-sm mt-0.5">
+              Sinkronisasi Alokasi Kuantitatif Terpilih dengan Prediksi Arah AI Makro bursa.
             </p>
           </div>
           {analysisCompleted && result && (
@@ -151,7 +134,6 @@ export default function AnalysisPage({
         </div>
 
         {!analysisCompleted || !result ? (
-          /* ── STATE MENUNGGU JIKA BELUM ADA DATA ANALISIS ── */
           <section className="flex flex-col items-center justify-center py-24 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 transition-all">
             <button
               onClick={() => setIsAnalysisModalOpen(true)}
@@ -181,12 +163,9 @@ export default function AnalysisPage({
                 <line x1="1" y1="15" x2="4" y2="15" />
               </svg>
             </button>
-            <h2 className="text-xl font-bold text-smart-navy mb-1">
-              Optimasi Portofolio Anda
-            </h2>
-            <p className="text-400 text-sm font-medium mb-6 text-center max-w-sm px-4">
-              Tentukan target indeks bursa dan model perhitungan manajemen
-              risiko yang Anda inginkan.
+            <h2 className="text-xl font-bold text-smart-navy mb-1">Optimasi Portofolio Anda</h2>
+            <p className="text-gray-400 text-sm font-medium mb-6 text-center max-w-sm px-4">
+              Tentukan target indeks bursa dan model perhitungan manajemen risiko yang Anda inginkan.
             </p>
             <button
               onClick={() => setIsAnalysisModalOpen(true)}
@@ -196,10 +175,8 @@ export default function AnalysisPage({
             </button>
           </section>
         ) : (
-          /* ── LAYOUT UTAMA: VERTIKAL SATU KOLOM PENUH (FULL WIDTH) ── */
           <div className="flex flex-col gap-6 animate-fade-in w-full">
-            
-            {/* Info strip ringkas: metode, indeks, periode */}
+            {/* Info strip ringkas */}
             <div className="bg-smart-navy text-white rounded-2xl px-6 py-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 relative overflow-hidden w-full">
               <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-white/5 rounded-full blur-xl pointer-events-none" />
               <div className="flex items-center gap-3 relative z-10">
@@ -213,22 +190,16 @@ export default function AnalysisPage({
               </div>
               <div className="text-left sm:text-right relative z-10">
                 <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Periode Historis</p>
-                <p className="text-xs font-bold text-white mt-0.5">{iData?.metadata?.start_date || metaForm?.start_date} — {iData?.metadata?.end_date || metaForm?.end_date}</p>
+                <p className="text-xs font-bold text-white mt-0.5">{metaForm?.start_date} — {metaForm?.end_date}</p>
               </div>
             </div>
 
-            {/* Bagian Tengah: Tabel Komposisi */}
+            {/* Tabel Komposisi */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm w-full">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
                 <h3 className="font-bold text-smart-navy text-base flex items-center gap-2">
-                  <span>📊</span> Komposisi Alokasi Saham Pilihan (
-                  {metaForm?.model_choice})
+                  <span>📊</span> Komposisi Alokasi Saham Pilihan ({metaForm?.model_choice})
                 </h3>
-                <span className="text-[11px] font-semibold px-2.5 py-1 bg-gray-50 text-gray-500 rounded-lg border border-gray-100 self-start sm:self-center">
-                  {metaForm?.model_choice === "CAPM"
-                    ? "📌 Top 10 Saham Terbesar"
-                    : "⚡ Seleksi Otomatis via Cut-Off Market"}
-                </span>
               </div>
 
               <div className="overflow-x-auto rounded-xl border border-gray-100">
@@ -246,57 +217,80 @@ export default function AnalysisPage({
                   <tbody className="divide-y divide-gray-50 text-gray-600 font-medium">
                     {(() => {
                       const isCAPM = metaForm?.model_choice === "CAPM";
-                      const stocksToRender = isCAPM
-                        ? pData?.portfolio?.slice(0, 10)
-                        : pData?.portfolio;
+                      const stocksToRender = isCAPM ? pData?.portfolio?.slice(0, 10) : pData?.portfolio;
 
                       return stocksToRender?.map((stock, idx) => (
-                        <tr
-                          key={idx}
-                          className="hover:bg-gray-50/30 transition-colors"
-                        >
+                        <tr key={idx} className="hover:bg-gray-50/30 transition-colors">
                           <td className="p-4">
-                            <span className="font-bold text-smart-navy block">
-                              {stock.ticker?.replace(".JK", "")}
-                            </span>
-                            <span className="text-[10px] text-gray-400 font-normal block max-w-[150px] truncate">
-                              {stock.fullname}
-                            </span>
+                            <span className="font-bold text-smart-navy block">{stock.ticker?.replace(".JK", "")}</span>
+                            <span className="text-[10px] text-gray-400 font-normal block max-w-[150px] truncate">{stock.fullname}</span>
                           </td>
-                          <td className="p-4 text-gray-700">
-                            {stock.sector}
+                          <td className="p-4 text-gray-700">{stock.sector}</td>
+                          <td className="p-4 text-gray-700">{fmtPersen(stock.weight)}</td>
+                          <td className="p-4 text-right text-smart-green">{fmtRupiah(stock.allocation)}</td>
+                          
+                          {/* ── COLUMN TREN + TOOLTIP KANAN ── */}
+                          <td className="p-4 text-center relative">
+                            <div className="inline-block group relative cursor-help">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                                  stock.trend === "Bullish"
+                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                                    : stock.trend === "Bearish"
+                                      ? "bg-rose-50 text-rose-700 border border-rose-100"
+                                      : "bg-amber-50 text-amber-700 border border-amber-100"
+                                }`}
+                              >
+                                {stock.trend || "Sideways"}
+                              </span>
+                              
+                              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 hidden group-hover:block w-56 p-2.5 bg-slate-900 text-white text-[11px] rounded-lg shadow-xl z-50 text-left leading-normal font-normal pointer-events-none transition-all animate-fade-in">
+                                <p className="font-bold border-b border-slate-700 pb-1 mb-1 flex items-center gap-1 text-white">
+                                  <span>{stock.trend === "Bullish" ? "📈" : stock.trend === "Bearish" ? "📉" : "📊"}</span>
+                                  Arti Kondisi: {stock.trend || "Sideways"}
+                                </p>
+                                <p className="text-slate-300 font-medium">
+                                  {stock.trend === "Bullish" && "Harga saham cenderung naik secara konsisten dalam jangka pendek-menengah. Sinyal kuat untuk akumulasi/beli."}
+                                  {stock.trend === "Bearish" && "Harga saham cenderung turun secara konsisten. Risiko penurunan tinggi, disarankan waspada/hindari."}
+                                  {(stock.trend === "Sideways" || !stock.trend) && "Harga bergerak mendatar dalam rentang konsolidasi terbatas tanpa arah naik/turun yang dominan."}
+                                </p>
+                                <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-r-[6px] border-r-slate-900" />
+                              </div>
+                            </div>
                           </td>
-                          <td className="p-4 text-gray-700">
-                            {fmtPersen(stock.weight)}
-                          </td>
-                          <td className="p-4 text-right text-smart-green">
-                            {fmtRupiah(stock.allocation)}
-                          </td>
-                          <td className="p-4 text-center">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                stock.trend === "Bullish"
-                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                                  : stock.trend === "Bearish"
-                                    ? "bg-rose-50 text-rose-700 border border-rose-100"
-                                    : "bg-amber-50 text-amber-700 border border-amber-100"
-                              }`}
-                            >
-                              {stock.trend || "Sideways"}
-                            </span>
-                          </td>
-                          <td className="p-4 text-center">
-                            <span
-                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide ${
-                                stock.recommendation === "BUY"
-                                  ? "bg-smart-green text-white"
-                                  : stock.recommendation === "HOLD"
-                                    ? "bg-amber-500 text-white"
-                                    : "bg-gray-100 text-gray-400"
-                              }`}
-                            >
-                              {stock.recommendation || "HOLD"}
-                            </span>
+
+                          {/* ── ⚡ COLUMN REKOMENDASI + TOOLTIP SISI KIRI ⚡ ── */}
+                          <td className="p-4 text-center relative">
+                            <div className="inline-block group relative cursor-help">
+                              
+                              {/* Tooltip Box Box yang muncul di SISI KIRI */}
+                              <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 hidden group-hover:block w-56 p-2.5 bg-slate-900 text-white text-[11px] rounded-lg shadow-xl z-50 text-left leading-normal font-normal pointer-events-none transition-all animate-fade-in">
+                                <p className="font-bold border-b border-slate-700 pb-1 mb-1 flex items-center gap-1 text-white">
+                                  <span>{stock.recommendation === "BUY" ? "🟢" : stock.recommendation === "HOLD" ? "🟡" : "🔴"}</span>
+                                  Saran: {stock.recommendation || "HOLD"}
+                                </p>
+                                <p className="text-slate-300 font-medium">
+                                  {stock.recommendation === "BUY" && "Model menyarankan untuk melakukan pembelian alokasi dana secara penuh pada harga pasar saat ini karena momentum pertumbuhan."}
+                                  {stock.recommendation === "HOLD" && "Disarankan mempertahankan kepemilikan lot saham saat ini sembari memantau volatilitas, jangan menambah posisi dulu."}
+                                  {stock.recommendation === "AVOID" && "Sinyal risiko teknis terdeteksi tinggi. Sebaiknya hindari membeli saham ini untuk mengamankan modal tunai Anda."}
+                                </p>
+                                {/* Arrow Segitiga Penunjuk Kanan */}
+                                <div className="absolute left-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[6px] border-l-slate-900" />
+                              </div>
+
+                              <span
+                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide ${
+                                  stock.recommendation === "BUY"
+                                    ? "bg-smart-green text-white"
+                                    : stock.recommendation === "HOLD"
+                                      ? "bg-amber-500 text-white"
+                                      : "bg-red-500 text-white" // Penyesuaian warna AVOID/SELL menjadi merah kontras
+                                }`}
+                              >
+                                {stock.recommendation || "HOLD"}
+                              </span>
+
+                            </div>
                           </td>
                         </tr>
                       ));
@@ -306,10 +300,9 @@ export default function AnalysisPage({
               </div>  
             </div>
 
-            {/* Bagian Paling Bawah: Narasi AI Interpretasi (Premium Card Layout) */}
+            {/* Narasi AI Interpretasi */}
             {pData?.portfolio_summary && (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col w-full overflow-hidden">
-                {/* Gradient Header */}
                 <div className="bg-gradient-to-r from-smart-navy via-[#1a2740] to-smart-navy px-6 py-4 flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-smart-green/20 flex items-center justify-center">
                     <span className="text-base">💡</span>
@@ -319,13 +312,11 @@ export default function AnalysisPage({
                     <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Analisis Naratif oleh SmartInvest AI • {metaForm?.model_choice}</p>
                   </div>
                 </div>
-                {/* Body: Parsed sections */}
                 <div className="p-6 flex flex-col gap-3">
                   {renderGenAISections(pData?.portfolio_summary)}
                 </div>
               </div>
             )}
-
           </div>
         )}
       </main>
@@ -333,3 +324,16 @@ export default function AnalysisPage({
   );
 }
 
+function TrendIcon({ up, size = 11 }) {
+  return up ? (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+      <polyline points="17 6 23 6 23 12" />
+    </svg>
+  ) : (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
+      <polyline points="17 18 23 18 23 12" />
+    </svg>
+  );
+}
