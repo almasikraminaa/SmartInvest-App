@@ -247,4 +247,5 @@ hanya proyeksi berdasarkan data.
         return response.text
 
     except Exception:
-        return fallback_text
+        return fallback_text
+

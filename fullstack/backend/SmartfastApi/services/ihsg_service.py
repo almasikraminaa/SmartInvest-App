@@ -616,3 +616,4 @@ def predict_ihsg_with_portfolio(
 
     return clean_nan(output)
 
+
