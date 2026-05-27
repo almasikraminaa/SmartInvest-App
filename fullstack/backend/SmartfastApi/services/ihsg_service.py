@@ -277,6 +277,52 @@ def predict_ihsg_with_portfolio(
     end_date: str,
     investment_amount: float
 ):
+        # ==========================
+    # VALIDASI PERIODE
+    # ==========================
+
+    start_dt = datetime.strptime(
+        start_date,
+        "%Y-%m-%d"
+    )
+
+    end_dt = datetime.strptime(
+        end_date,
+        "%Y-%m-%d"
+    )
+
+    # tanggal akhir > awal
+    if end_dt <= start_dt:
+        raise ValueError(
+            "Tanggal akhir harus "
+            "setelah tanggal mulai"
+        )
+
+    period_days = (
+        end_dt - start_dt
+    ).days
+
+    period_months = (
+        period_days / 30.44
+    )
+
+    period_years = (
+        period_days / 365.25
+    )
+
+    # minimal 6 bulan
+    if period_months < 6:
+        raise ValueError(
+            "Periode minimal "
+            "6 bulan"
+        )
+
+    # maksimal 5 tahun
+    if period_years > 5:
+        raise ValueError(
+            "Periode maksimal "
+            "5 tahun"
+        )
     # ==========================
     # 1. LOAD DATA
     # ==========================
