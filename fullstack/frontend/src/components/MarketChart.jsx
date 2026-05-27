@@ -245,6 +245,27 @@ function LineChart({ series, loading, isPositive, range }) {
       </div>
     );
 
+  if (series.length === 0 && !loading && range === "1d") {
+    return (
+      <div
+        className="flex flex-col items-center justify-center bg-slate-50/80 backdrop-blur-sm rounded-xl border border-dashed border-slate-200 p-6 text-center"
+        style={{ height: H }}
+      >
+        <div className="bg-amber-50 text-amber-500 p-3 rounded-full mb-3 animate-bounce">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <p className="text-sm font-extrabold text-slate-800 mb-1">
+          Bursa Sedang Tutup / Libur
+        </p>
+        <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
+          Bursa Efek Indonesia (BEI) tidak aktif hari ini. Data intraday 1D akan tersedia kembali pada hari kerja berikutnya (Senin - Jumat, 09:00 - 16:00 WIB).
+        </p>
+      </div>
+    );
+  }
+
   return (
     <svg
       ref={svgRef}
@@ -781,6 +802,7 @@ export default function MarketChart() {
   const [tf, setTf] = useState(CHART_TFS[0]);
   const [series, setSeries] = useState([]);
   const [quote, setQuote] = useState(null);
+  const [dailyQuote, setDailyQuote] = useState(null);
   const [perfs, setPerfs] = useState(null);
   const [ranges, setRanges] = useState(null);
   const [diary, setDiary] = useState(null);
@@ -955,9 +977,60 @@ export default function MarketChart() {
     }
   }, []);
 
+  const fetchDailyQuote = useCallback(async () => {
+    try {
+      const res = await fetch(
+        "/api/yahoo/v8/finance/chart/%5EJKSE?interval=5m&range=1d",
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      const result = data?.chart?.result?.[0];
+      const meta = result?.meta;
+      const q = result?.indicators?.quote?.[0] ?? {};
+
+      const validCloses = (q.close ?? []).filter(
+        (v) => v != null && isFinite(Number(v)),
+      );
+      const last =
+        safeNum(meta?.regularMarketPrice) ?? safeNum(validCloses.at(-1));
+      const prev = safeNum(meta?.previousClose) ?? safeNum(validCloses.at(-2));
+      const open =
+        safeNum(meta?.regularMarketOpen) ??
+        safeNum((q.open ?? []).filter(Boolean)[0]);
+      const high =
+        safeNum(meta?.regularMarketDayHigh) ??
+        ((q.high ?? []).filter(Boolean).length ? Math.max(...(q.high ?? []).filter(Boolean)) : null);
+      const low =
+        safeNum(meta?.regularMarketDayLow) ??
+        ((q.low ?? []).filter(Boolean).length ? Math.min(...(q.low ?? []).filter(Boolean)) : null);
+      const vol =
+        safePos(meta?.regularMarketVolume) ??
+        (q.volume ?? []).filter(Boolean).reduce((a, b) => a + b, 0);
+      const mcap = safeNum(meta?.marketCap);
+      const pct = last && prev ? ((last - prev) / prev) * 100 : null;
+
+      setDailyQuote({
+        close: last,
+        prev,
+        open,
+        high,
+        low,
+        volume: vol,
+        marketCap: mcap,
+        pct,
+        change: last && prev ? last - prev : null,
+      });
+    } catch (err) {
+      console.error("Gagal mengambil daily quote:", err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchChart();
   }, [fetchChart]);
+  useEffect(() => {
+    fetchDailyQuote();
+  }, [fetchDailyQuote]);
   useEffect(() => {
     fetchPerfs();
   }, [fetchPerfs]);
@@ -965,7 +1038,8 @@ export default function MarketChart() {
     fetchDiary();
   }, [fetchDiary]);
 
-  const isPositive = (quote?.change ?? 0) >= 0;
+  const displayQuote = dailyQuote || quote;
+  const isPositive = (displayQuote?.change ?? 0) >= 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -983,22 +1057,22 @@ export default function MarketChart() {
           </p>
         </div>
         <div className="text-right flex-shrink-0">
-          {chartLoading ? (
+          {chartLoading && !displayQuote ? (
             <div className="w-24 h-6 bg-gray-100 rounded animate-pulse" />
           ) : (
             <>
               <p className="text-2xl font-extrabold text-gray-900 tabular-nums tracking-tight">
-                {fmt(quote?.close, 2)}
+                {fmt(displayQuote?.close, 2)}
               </p>
               <p
                 className={`text-sm font-semibold flex items-center justify-end gap-1 ${isPositive ? "text-emerald-600" : "text-red-500"}`}
               >
                 <TrendIcon up={isPositive} />
                 {isPositive ? "+" : ""}
-                {fmt(quote?.change, 2)}{" "}
+                {fmt(displayQuote?.change, 2)}{" "}
                 <span className="opacity-60 text-xs">
                   ({isPositive ? "+" : ""}
-                  {fmt(quote?.pct, 2)}%)
+                  {fmt(displayQuote?.pct, 2)}%)
                 </span>
               </p>
             </>
@@ -1034,11 +1108,11 @@ export default function MarketChart() {
         Data di atas diperbarui secara real-time dari Yahoo Finance.
       </p>
 
-      <OHLCGrid quote={quote} loading={chartLoading} />
+      <OHLCGrid quote={displayQuote} loading={chartLoading || !displayQuote} />
       <IndexPerformance perfs={perfs} loading={perfLoading} />
       <LowHighRange
         ranges={ranges}
-        currentPrice={quote?.close}
+        currentPrice={displayQuote?.close}
         loading={perfLoading}
       />
       <IndexDiary diary={diary} loading={diary === null} />
