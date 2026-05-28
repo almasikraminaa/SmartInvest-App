@@ -11,7 +11,7 @@ from pathlib import Path
 
 from services.genai_service import (
     generate_market_summary,
-    generate_portfolio_summary
+    generate_recommendation_summary
 )
 from utils.data_loader import load_all_data
 from constants.index_map import INDEX_MAP
@@ -291,34 +291,38 @@ def predict_ihsg_with_portfolio(
         "%Y-%m-%d"
     )
 
-    # tanggal akhir > awal
+    # tanggal akhir harus > awal
     if end_dt <= start_dt:
         raise ValueError(
             "Tanggal akhir harus "
             "setelah tanggal mulai"
         )
 
-    period_days = (
-        end_dt - start_dt
-    ).days
-
-    period_months = (
-        period_days / 30.44
+    delta = relativedelta(
+        end_dt,
+        start_dt
     )
 
-    period_years = (
-        period_days / 365.25
+    total_months = (
+        delta.years * 12
+        + delta.months
     )
 
     # minimal 6 bulan
-    if period_months < 6:
+    if total_months < 6:
         raise ValueError(
             "Periode minimal "
             "6 bulan"
         )
 
     # maksimal 5 tahun
-    if period_years > 5:
+    if delta.years > 5 or (
+        delta.years == 5
+        and (
+            delta.months > 0
+            or delta.days > 0
+        )
+    ):
         raise ValueError(
             "Periode maksimal "
             "5 tahun"
@@ -520,6 +524,7 @@ def predict_ihsg_with_portfolio(
 
     # Mengambil risk-free rate dinamis dari data BI rate
     risk_free_rate_pct = float(feature_result["annual_risk_free_rate"] * 100)
+    bi_rate_pct = round(risk_free_rate_pct, 3)
 
     if beta_avg is not None and beta_avg != 0:
         treynor_ratio = round((annual_return_pct - risk_free_rate_pct) / beta_avg, 4)
@@ -530,18 +535,41 @@ def predict_ihsg_with_portfolio(
     # 12. GENAI INTERPRETATION
     # ==========================
     try:
-        ai_interpretation = generate_portfolio_summary(
+        # Formulate variables for recommendation summary
+        horizon_yr = round(period_years, 1)
+        gain_ex = int(investment_amount * float(result["portfolio_annual_return"]))
+        loss_ex = int(investment_amount * float(result["portfolio_annual_risk"]))
+        
+        alloc_items = [
+            f"{item['ticker'].replace('.JK', '')} ({item['weight']*100:.1f}%)"
+            for item in portfolio
+        ]
+        alloc_str = ", ".join(alloc_items)
+
+        comparison_lines = []
+        for m in method_comparison:
+            best_tag = " [Metode Terbaik]" if m["is_best"] else ""
+            comparison_lines.append(
+                f"- Metode {m['method']}: Expected Return {m['return']*100:.1f}%, Risiko {m['risk']*100:.1f}%, Sharpe Ratio {m['sharpe']:.3f}{best_tag}"
+            )
+        comparison_str = "\n".join(comparison_lines)
+
+        market_trend_str = f"naik ({market_trend})" if market_trend == "Bullish" else f"turun ({market_trend})" if market_trend == "Bearish" else f"sideways ({market_trend})"
+
+        ai_interpretation = generate_recommendation_summary(
             best_method=best_method,
-            annual_return=annual_return_pct,
-            annual_risk=annual_risk_pct,
-            sharpe_ratio=sharpe_ratio_val,
-            alpha=alpha_avg,
-            beta=beta_avg,
-            portfolio=portfolio,
-            market_trend=market_trend,
+            bi_rate=bi_rate_pct,
+            market_trend_str=market_trend_str,
             confidence=confidence,
-            investment_amount=investment_amount,
-            reason=selection_reason
+            horizon_yr=horizon_yr,
+            ret_pct=annual_return_pct,
+            risk_pct=annual_risk_pct,
+            sharpe=sharpe_ratio_val,
+            beta=beta_avg,
+            gain_ex=gain_ex,
+            loss_ex=loss_ex,
+            alloc_str=alloc_str,
+            comparison_str=comparison_str
         )
     except Exception as e:
         ai_interpretation = f"GenAI Error: {str(e)}"
@@ -550,7 +578,6 @@ def predict_ihsg_with_portfolio(
     # 13. CONSTRUCT OUTPUT JSON
     # ==========================
     trading_days = filtered_result["filtering_summary"]["trading_days_used"]
-    bi_rate_pct = round(risk_free_rate_pct, 3)
 
     portfolio_allocation = []
     for item in portfolio:
@@ -615,5 +642,4 @@ def predict_ihsg_with_portfolio(
     }
 
     return clean_nan(output)
-
 
