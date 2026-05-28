@@ -1038,7 +1038,24 @@ export default function MarketChart() {
     fetchDiary();
   }, [fetchDiary]);
 
-  const displayQuote = dailyQuote || quote;
+  const displayQuote = (() => {
+    const base = dailyQuote || quote;
+    if (tf.label !== "1D" && series.length > 1) {
+      const latest = series.at(-1)?.close;
+      const first = series[0]?.close;
+      if (latest != null && first != null && first !== 0) {
+        const change = latest - first;
+        const pct = (change / first) * 100;
+        return {
+          ...base,
+          close: latest,
+          change,
+          pct,
+        };
+      }
+    }
+    return base;
+  })();
   const isPositive = (displayQuote?.change ?? 0) >= 0;
 
   return (
