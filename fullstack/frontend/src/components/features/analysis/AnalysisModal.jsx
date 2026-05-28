@@ -67,19 +67,19 @@ export default function AnalysisModal({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-const handleQuickSelect = (months) => {
+  const handleQuickSelect = (months) => {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - months);
 
-    const formatDate = (date) => date.toISOString().split('T')[0];
+    const formatDate = (date) => date.toISOString().split("T")[0];
 
     setFormData((prev) => ({
       ...prev,
       start_date: formatDate(startDate),
       end_date: formatDate(endDate),
     }));
-    
+
     // Opsional: hapus error jika user klik tombol cepat
     setErrors((prev) => ({ ...prev, start_date: null, end_date: null }));
   };
@@ -101,13 +101,16 @@ const handleQuickSelect = (months) => {
       } else {
         const diffMs = end - start;
         const diffYears = diffMs / (1000 * 60 * 60 * 24 * 365.25);
-        if (diffYears > 5) {
+        const diffMonths = diffMs / (1000 * 60 * 60 * 24 * 30.4375);
+        if (diffMonths < 5) {
+          localErrors.start_date = "Periode minimal 5 bulan";
+        } else if (diffYears > 5) {
           localErrors.start_date = "Periode maksimal 5 tahun";
         }
       }
     }
-    if (!formData.investment_amount || formData.investment_amount <= 0) {
-      localErrors.investment_amount = "Jumlah investasi harus lebih dari 0";
+    if (!formData.investment_amount || formData.investment_amount < 100000) {
+      localErrors.investment_amount = "Minimal investasi adalah Rp 100.000";
     }
     return localErrors;
   };
@@ -189,240 +192,316 @@ const handleQuickSelect = (months) => {
 
   if (!isOpen) return null;
 
-
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-smart-navy/60 backdrop-blur-sm p-6"
       onClick={(e) => e.target === e.currentTarget && !isLoading && onClose()}
     >
-      <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl border border-gray-100 flex flex-col gap-6 max-h-[88vh] overflow-y-auto relative">
-        <div>
-          <h2 className="text-2xl font-bold text-smart-navy mb-1">
-            Konfigurasi AI
-          </h2>
-          <p className="text-gray-400 text-sm font-medium">
-            Masukkan parameter analisis baru Anda
-          </p>
-        </div>
-
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-          {/* Model */}
-          <div
-            className={`bg-gray-50 p-4 rounded-xl border flex flex-col gap-1 ${errors.model_choice ? "border-red-300" : "border-gray-50"}`}
-          >
-            <label className="text-[10px] uppercase tracking-wider font-bold text-gray-400">
-              Model Analisis
-            </label>
-            <select
-              value={formData.model_choice}
-              onChange={handleChange("model_choice")}
-              disabled={isLoading}
-              className="bg-transparent text-sm font-bold text-smart-navy outline-none cursor-pointer"
-            >
-              {METHODS.map((m) => (
-                <option
-                  key={m.value}
-                  value={m.value}
-                  disabled={m.value === "" && formData.model_choice !== ""}
-                >
-                  {m.label}
-                </option>
-              ))}
-            </select>
+      {isLoading ? (
+        /* ⚡ TAMPILAN LOADING PREMIUM KHUSUS (REVISI 5) ⚡ */
+        <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl border border-gray-100 flex flex-col items-center justify-center text-center gap-6 min-h-[380px] animate-fade-in">
+          <div className="relative flex items-center justify-center my-2">
+            {/* Glowing outer pulse rings */}
+            <div className="absolute w-24 h-24 bg-emerald-500/10 rounded-full animate-ping" />
+            <div className="absolute w-16 h-16 bg-smart-navy/5 rounded-full animate-pulse" />
+            
+            {/* Rotating central ring */}
+            <div className="w-14 h-14 border-4 border-smart-green border-t-transparent rounded-full animate-spin shadow-md z-10" />
+            <span className="absolute text-xl">🤖</span>
+          </div>
+          
+          <div>
+            <h3 className="text-lg font-extrabold text-smart-navy mb-1.5 animate-pulse">
+              SmartInvest AI Sedang Bekerja...
+            </h3>
+            <p className="text-gray-400 text-xs max-w-xs mx-auto leading-relaxed">
+              Harap tunggu sebentar. Sistem AI kami sedang memuat data historis bursa dan menyinkronkan metode alokasi portofolio terbaik untuk Anda.
+            </p>
           </div>
 
-          {/* Target Index */}
-          <div
-            className={`bg-gray-50 p-4 rounded-xl border flex flex-col gap-1 ${errors.index_choice ? "border-red-300" : "border-gray-50"}`}
-          >
-            <label className="text-[10px] uppercase tracking-wider font-bold text-gray-400">
-              Indeks Target
-            </label>
-            <select
-              value={formData.index_choice}
-              onChange={handleChange("index_choice")}
-              disabled={isLoading}
-              className="bg-transparent text-sm font-bold text-smart-navy outline-none cursor-pointer"
-            >
-              {TARGET_INDICES.map((idx) => (
-                <option
-                  key={idx.value}
-                  value={idx.value}
-                  disabled={idx.value === "" && formData.index_choice !== ""}
-                >
-                  {idx.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Period */}
-          <div
-            className={`bg-gray-50 p-4 rounded-xl border flex flex-col gap-1 ${errors.start_date || errors.end_date ? "border-red-300" : "border-gray-50"}`}
-          >
-            <label className="text-[10px] uppercase tracking-wider font-bold text-gray-400">
-              Periode Historis
-            </label>
-            <div className="flex gap-4 mt-1">
-              <div className="flex-1 flex flex-col">
-                <span className="text-[9px] font-bold text-gray-400 mb-0.5">
-                  Mulai
-                </span>
-                <input
-                  type="date"
-                  value={formData.start_date}
-                  onChange={handleChange("start_date")}
-                  min="2018-01-01"
-                  max="2026-05-19"
-                  disabled={isLoading}
-                  className="bg-transparent text-xs font-bold text-smart-navy outline-none border-b border-gray-200 pb-1"
-                />
-              </div>
-              <div className="flex-1 flex flex-col">
-                <span className="text-[9px] font-bold text-gray-400 mb-0.5">
-                  Akhir
-                </span>
-                <input
-                  type="date"
-                  value={formData.end_date}
-                  onChange={handleChange("end_date")}
-                  min="2018-01-01"
-                  max="2026-05-19"
-                  disabled={isLoading}
-                  className="bg-transparent text-xs font-bold text-smart-navy outline-none border-b border-gray-200 pb-1"
-                />
-              </div>
+          {/* Steps Progress Visual Checklist */}
+          <div className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 flex flex-col gap-2.5 text-left">
+            <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-600">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shrink-0" />
+              <span>Memuat data historis emiten BEI...</span>
             </div>
-            {/* radio button */}
-           <div className="flex gap-4 mt-3 px-1">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="period"
-                className="accent-smart-navy h-4 w-4"
-                onChange={() => handleQuickSelect(6)}
-              />
-              <span className="text-[10px] font-bold text-gray-500">6 Bulan</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="period"
-                className="accent-smart-navy h-4 w-4"
-                onChange={() => handleQuickSelect(12)}
-              />
-              <span className="text-[10px] font-bold text-gray-500">1 Tahun</span>
-            </label>
+            <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-600">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shrink-0" />
+              <span>Mengalkulasi bobot efisiensi portofolio...</span>
+            </div>
+            <div className="flex items-center gap-2.5 text-xs font-semibold text-slate-500">
+              <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse shrink-0" />
+              <span>Menghasilkan narasi rekomendasi AI...</span>
+            </div>
           </div>
         </div>
+      ) : (
+        /* TAMPILAN MODAL NORMAL */
+        <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-2xl border border-gray-100 flex flex-col gap-6 max-h-[88vh] overflow-y-auto relative">
+          <div>
+            <h2 className="text-2xl font-bold text-smart-navy mb-1">
+              Konfigurasi AI
+            </h2>
+            <p className="text-gray-400 text-sm font-medium">
+              Masukkan parameter analisis baru Anda
+            </p>
+          </div>
 
-          {/* Investment Amount */}
-          <div
-            className={`
-    bg-gray-50
-    p-4
-    rounded-xl
-    border
-    flex
-    flex-col
-    gap-1
-    ${errors.investment_amount ? "border-red-300" : "border-gray-50"}
-  `}
-          >
-            <label
-              className="
-      text-[10px]
-      uppercase
-      tracking-wider
-      font-bold
-      text-gray-400
-    "
-            >
-              Investment Amount
-            </label>
-
+          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+            {/* Model */}
             <div
-              className="
-      flex
-      items-center
-      gap-2
-      mt-1
-    "
+              className={`bg-gray-50 p-4 rounded-xl border flex flex-col gap-1 ${errors.model_choice ? "border-red-300" : "border-gray-50"}`}
             >
-              <span
-                className="
-        text-sm
-        font-bold
-        text-gray-400
-      "
-              >
-                Rp
-              </span>
-
-              <input
-                type="text"
-                inputMode="numeric"
-                min="100000"
-                placeholder="10.000.000"
-                value={
-                  formData.investment_amount
-                    ? new Intl.NumberFormat("id-ID").format(
-                        formData.investment_amount,
-                      )
-                    : ""
-                }
-                onChange={(e) => {
-                  const rawValue = e.target.value.replace(/\D/g, "");
-
-                  setFormData((prev) => ({
-                    ...prev,
-
-                    investment_amount: rawValue === "" ? "" : Number(rawValue),
-                  }));
-                }}
+              <label className="text-[10px] uppercase tracking-wider font-bold text-gray-400">
+                Model Analisis
+              </label>
+              <select
+                value={formData.model_choice}
+                onChange={handleChange("model_choice")}
                 disabled={isLoading}
-                className="
-        bg-transparent
-        text-sm
-        font-bold
-        text-smart-navy
-        outline-none
-        w-full
-        placeholder-gray-300
-      "
-              />
+                className="bg-transparent text-sm font-bold text-smart-navy outline-none cursor-pointer"
+              >
+                {METHODS.map((m) => (
+                  <option
+                    key={m.value}
+                    value={m.value}
+                    disabled={m.value === "" && formData.model_choice !== ""}
+                  >
+                    {m.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <span
-              className="
-      text-[10px]
-      text-gray-400
-      mt-1
-    "
+            {/* Target Index */}
+            <div
+              className={`bg-gray-50 p-4 rounded-xl border flex flex-col gap-1 ${errors.index_choice ? "border-red-300" : "border-gray-50"}`}
             >
-              Example: Rp 10.000.000
-            </span>
-          </div>
+              <label className="text-[10px] uppercase tracking-wider font-bold text-gray-400">
+                Indeks Target
+              </label>
+              <select
+                value={formData.index_choice}
+                onChange={handleChange("index_choice")}
+                disabled={isLoading}
+                className="bg-transparent text-sm font-bold text-smart-navy outline-none cursor-pointer"
+              >
+                {TARGET_INDICES.map((idx) => (
+                  <option
+                    key={idx.value}
+                    value={idx.value}
+                    disabled={idx.value === "" && formData.index_choice !== ""}
+                  >
+                    {idx.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="flex gap-3 mt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isLoading}
-              className="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
+            {/* Period */}
+            <div
+              className={`bg-gray-50 p-4 rounded-xl border flex flex-col gap-1 ${errors.start_date || errors.end_date ? "border-red-300" : "border-gray-50"}`}
             >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex-[2] bg-smart-green text-white py-3 rounded-xl font-bold text-sm hover:bg-[#00b86a] transition-all flex items-center justify-center gap-2 shadow-sm"
+              <label className="text-[10px] uppercase tracking-wider font-bold text-gray-400">
+                Periode Historis
+              </label>
+              <div className="flex gap-4 mt-1">
+                <div className="flex-1 flex flex-col">
+                  <span className="text-[9px] font-bold text-gray-400 mb-0.5">
+                    Mulai
+                  </span>
+                  <input
+                    type="date"
+                    value={formData.start_date}
+                    onChange={handleChange("start_date")}
+                    min="2018-01-01"
+                    max={new Date().toISOString().split("T")[0]}
+                    disabled={isLoading}
+                    className="bg-transparent text-xs font-bold text-smart-navy outline-none border-b border-gray-200 pb-1"
+                  />
+                </div>
+                <div className="flex-1 flex flex-col">
+                  <span className="text-[9px] font-bold text-gray-400 mb-0.5">
+                    Akhir
+                  </span>
+                  <input
+                    type="date"
+                    value={formData.end_date}
+                    onChange={handleChange("end_date")}
+                    min="2018-01-01"
+                    max={new Date().toISOString().split("T")[0]}
+                    disabled={isLoading}
+                    className="bg-transparent text-xs font-bold text-smart-navy outline-none border-b border-gray-200 pb-1"
+                  />
+                </div>
+              </div>
+              
+              {/* radio button */}
+              <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3 px-1">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="period"
+                    className="accent-smart-navy h-3.5 w-3.5"
+                    onChange={() => handleQuickSelect(6)}
+                  />
+                  <span className="text-[10px] font-bold text-gray-500">
+                    6 Bulan
+                  </span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="period"
+                    className="accent-smart-navy h-3.5 w-3.5"
+                    onChange={() => handleQuickSelect(12)}
+                  />
+                  <span className="text-[10px] font-bold text-gray-500">
+                    1 Tahun
+                  </span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="period"
+                    className="accent-smart-navy h-3.5 w-3.5"
+                    onChange={() => handleQuickSelect(24)}
+                  />
+                  <span className="text-[10px] font-bold text-gray-500">
+                    2 Tahun
+                  </span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="period"
+                    className="accent-smart-navy h-3.5 w-3.5"
+                    onChange={() => handleQuickSelect(36)}
+                  />
+                  <span className="text-[10px] font-bold text-gray-500">
+                    3 Tahun
+                  </span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="period"
+                    className="accent-smart-navy h-3.5 w-3.5"
+                    onChange={() => handleQuickSelect(60)}
+                  />
+                  <span className="text-[10px] font-bold text-gray-500">
+                    5 Tahun
+                  </span>
+                </label>
+              </div>
+
+              {/* ⚡ REVISI 3: Keterangan Pilihan Cepat ⚡ */}
+              <p className="text-[10px] text-gray-400 mt-2.5 leading-relaxed italic">
+                * Pilihan cepat akan menarik data historis mundur dari tanggal hari ini (contoh: 6 Bulan / 1 Tahun Terakhir).
+              </p>
+            </div>
+
+            {/* Investment Amount */}
+            <div
+              className={`
+                bg-gray-50
+                p-4
+                rounded-xl
+                border
+                flex
+                flex-col
+                gap-1
+                ${errors.investment_amount ? "border-red-300" : "border-gray-50"}
+              `}
             >
-              {isLoading ? "Memproses Perhitungan..." : "Mulai Analisis"}
-            </button>
-          </div>
-        </form>
-      </div>
+              <label
+                className="
+                  text-[10px]
+                  uppercase
+                  tracking-wider
+                  font-bold
+                  text-gray-400
+                "
+              >
+                Investment Amount
+              </label>
+
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-2
+                  mt-1
+                "
+              >
+                <span
+                  className="
+                    text-sm
+                    font-bold
+                    text-gray-400
+                  "
+                >
+                  Rp
+                </span>
+
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="10.000.000"
+                  value={
+                    formData.investment_amount
+                      ? new Intl.NumberFormat("id-ID").format(
+                          formData.investment_amount,
+                        )
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const rawValue = e.target.value.replace(/\D/g, "");
+
+                    setFormData((prev) => ({
+                      ...prev,
+                      investment_amount: rawValue === "" ? "" : Number(rawValue),
+                    }));
+                  }}
+                  disabled={isLoading}
+                  className="
+                    bg-transparent
+                    text-sm
+                    font-bold
+                    text-smart-navy
+                    outline-none
+                    w-full
+                    placeholder-gray-300
+                  "
+                />
+              </div>
+
+              {/* ⚡ REVISI 2: Batas & Keterangan Minimal Investasi ⚡ */}
+              <span className="text-[10px] text-gray-400 mt-1 font-bold">
+                * Minimal investasi Rp 100.000 (Seratus Ribu Rupiah)
+              </span>
+            </div>
+
+            <div className="flex gap-3 mt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isLoading}
+                className="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="flex-[2] bg-smart-green text-white py-3 rounded-xl font-bold text-sm hover:bg-[#00b86a] transition-all flex items-center justify-center gap-2 shadow-sm"
+              >
+                Mulai Analisis
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
