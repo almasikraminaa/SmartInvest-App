@@ -102,18 +102,29 @@ export default function AnalysisPage({
           </div>
         )}
 
-        {/* Bespoked Stock details overview */}
+        {/* Bullets Portfolio Asset Allocations */}
         {stocks.length > 0 && (
           <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">🔍 STRUKTUR DETIL PORTOFOLIO</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {stocks.map((s, i) => (
-                <div key={i} className="bg-slate-50 border border-slate-100 rounded-xl p-4 hover:border-slate-200 transition-colors">
-                  <p className="text-xs text-slate-600 leading-relaxed font-semibold">
-                    {s.replace(/\*\*/g, "")}
-                  </p>
-                </div>
-              ))}
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">📊 Alokasi Aset Portofolio Pilihan</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {stocks.map((s, i) => {
+                const match = s.match(/^([A-Za-z]+)\s*\(([-+]?[0-9.,]+%)\)/);
+                if (match) {
+                  return (
+                    <div key={i} className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 shadow-sm hover:scale-[1.02] transition-all">
+                      <span className="w-2 h-2 rounded-full shrink-0 bg-smart-green" />
+                      <span className="text-sm font-extrabold text-smart-navy">{match[1]}</span>
+                      <span className="text-xs font-black text-gray-500 ml-auto">{match[2]}</span>
+                    </div>
+                  );
+                }
+                return (
+                  <div key={i} className="flex items-center gap-2.5 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-smart-green shrink-0" />
+                    <span className="text-xs font-bold text-slate-700">{s.replace(/\*\*/g, "")}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
