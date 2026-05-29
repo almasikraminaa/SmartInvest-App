@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { registerUser } from '../services/authService';
 import { supabase } from '../services/supabaseClient';
-import bgVideo from '../assets/videos/bg.mp4';
+import heroVideo from '../assets/videos/bg.mp4'; 
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -65,7 +65,7 @@ export default function RegisterPage() {
       {/* Background Cinematic */}
       <div className="absolute inset-0 z-0">
         <video autoPlay loop muted playsInline className="w-full h-full object-cover opacity-35 scale-105 filter blur-[2px]">
-          <source src={bgVideo} type="video/mp4" />
+          <source src={heroVideo} type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-gradient-to-tr from-slate-950 via-slate-950/70 to-blue-950/40" />
       </div>

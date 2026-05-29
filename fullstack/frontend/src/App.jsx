@@ -1,6 +1,12 @@
 // src/App.jsx
 import { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+} from "react-router-dom";
 import { supabase } from "./services/supabaseClient";
 import Sidebar from "./components/layout/Sidebar";
 import AnalysisModal from "./components/features/analysis/AnalysisModal";
@@ -20,6 +26,7 @@ function App() {
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
   const [preSelectedMethod, setPreSelectedMethod] = useState("");
   const [user, setUser] = useState(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -78,16 +85,31 @@ function App() {
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+    try {
+      setIsLoggingOut(true);
 
-    // Bersihkan seluruh berkas pencatatan lokal saat user keluar akun
-    setAnalysisCompleted(false);
-    setAnalysisResult(null);
-    setMetaForm(null);
-    localStorage.removeItem("smartinvest_analysis_completed");
-    localStorage.removeItem("smartinvest_analysis_result");
-    localStorage.removeItem("smartinvest_meta_form");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      localStorage.removeItem("smartinvest_analysis_completed");
+
+      localStorage.removeItem("smartinvest_analysis_result");
+
+      localStorage.removeItem("smartinvest_meta_form");
+
+      setAnalysisCompleted(false);
+
+      setAnalysisResult(null);
+
+      setMetaForm(null);
+
+      await supabase.auth.signOut();
+
+      window.location.replace("/login");
+    } catch (err) {
+      console.error(err);
+
+      setIsLoggingOut(false);
+    }
   };
 
   const formattedUser = user
@@ -135,21 +157,36 @@ function App() {
 
   const isLoggedIn = !!user;
 
-  if (!isLoggedIn) {
+  if (!isLoggedIn && !isLoggingOut) {
     return (
       <BrowserRouter>
         <Toaster position="top-right" />
+
         <Routes>
           <Route path="/" element={<LandingPage />} />
+
           <Route path="/login" element={<LoginPage />} />
+
           <Route path="/register" element={<RegisterPage />} />
+
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
     );
   }
+  if (isLoggingOut) {
+    return (
+      <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-[9999]">
+        <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin" />
 
+        <h2 className="text-white text-xl font-bold mt-6">Logging out...</h2>
+
+        <p className="text-slate-400 text-sm mt-2">Cleaning your session</p>
+      </div>
+    );
+  }
   return (
     <BrowserRouter>
       <Toaster position="top-right" />
@@ -217,7 +254,21 @@ function App() {
             </Routes>
           </div>
         </main>
+        {isLoggingOut && (
+          <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center animate-fadeIn">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 border-4 border-white/20 rounded-full"></div>
 
+              <div className="absolute inset-0 border-4 border-transparent border-t-white rounded-full animate-spin"></div>
+            </div>
+
+            <h2 className="text-white text-xl font-bold mt-6">
+              Logging out...
+            </h2>
+
+            <p className="text-slate-300 text-sm mt-2">Cleaning your session</p>
+          </div>
+        )}
         <AnalysisModal
           isOpen={isAnalysisModalOpen}
           onClose={() => setIsAnalysisModalOpen(false)}

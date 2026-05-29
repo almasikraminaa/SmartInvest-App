@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import bgImage from '../assets/images/bg.jpg';
+import heroVideo from '../assets/videos/bg.mp4'; 
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
@@ -35,7 +36,7 @@ export default function ForgotPasswordPage() {
       {/* Background Cinematic */}
       <div className="absolute inset-0 z-0">
         <video autoPlay loop muted playsInline className="w-full h-full object-cover opacity-30 scale-105 filter blur-[2px]">
-          <source src="/src/assets/videos/bg.mp4" type="video/mp4" />
+          <source src={heroVideo} type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-gradient-to-tr from-slate-950 via-slate-950/70 to-blue-950/40" />
       </div>

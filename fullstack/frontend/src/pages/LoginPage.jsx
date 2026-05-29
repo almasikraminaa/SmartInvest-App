@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { loginUser } from '../services/authService';
 import bgImage from '../assets/images/bg.jpg';
+import heroVideo from '../assets/videos/bg.mp4'; 
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ export default function LoginPage() {
           playsInline
           className="w-full h-full object-cover opacity-35 scale-105 filter blur-[2px]"
         >
-          <source src="/src/assets/videos/bg.mp4" type="video/mp4" />
+          <source src={heroVideo} type="video/mp4" />
         </video>
 
         <div className="absolute inset-0 bg-gradient-to-tr from-slate-950 via-slate-950/70 to-blue-950/40 pointer-events-none" />
