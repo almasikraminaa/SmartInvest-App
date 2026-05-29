@@ -162,20 +162,40 @@ export default function AnalysisModal({
 
       // 3. PANGGIL SERVICE SERVICE BARU UNTUK SAVE AMAN KE SUPABASE
       try {
-        const { error: dbError } = await saveInvestmentHistory(
-          formData.index_choice, // targetIndex
-          formData.model_choice, // method
-          Number(formData.investment_amount), // capital
-          Number(finalReturn), // expectedReturn
-          Number(finalRisk), // risk
-          Number(finalSharpe), // sharpeRatio
-          ihsgRes?.ihsg_analysis?.market_trend || "Sideways", // marketSentiment
-          Number(ihsgRes?.metadata?.bi_rate || 5.8), // biRate
-          formData.start_date, // startDate
-          formData.end_date, // endDate
-          ihsgRes?.ai_interpretation || "", // aiInterpretation
-          portfolioRes || combinedResponse, // portfolioAllocation
-        );
+        const { error: dbError } = await saveInvestmentHistory({
+          targetIndex: formData.index_choice,
+
+          method: formData.model_choice,
+
+          capital: Number(formData.investment_amount),
+
+          expectedReturn: Number(finalReturn),
+
+          risk: Number(finalRisk),
+
+          sharpeRatio: Number(finalSharpe),
+
+          marketSentiment: ihsgRes?.ihsg_analysis?.market_trend || "Sideways",
+
+          biRate: Number(ihsgRes?.metadata?.bi_rate || 5.8),
+
+          startDate: formData.start_date,
+
+          endDate: formData.end_date,
+
+          aiInterpretation: ihsgRes?.ai_interpretation || "",
+
+          portfolioAllocation: portfolioRes?.portfolio || [],
+
+          // ⭐ BARU
+          analysisForm: formData,
+
+          analysisResult: {
+            portfolio_data: portfolioRes,
+
+            ihsg_data: ihsgRes,
+          },
+        });
 
         if (dbError) throw new Error(dbError);
       } catch (dbError) {

@@ -5,6 +5,7 @@ export default function AnalysisPage({
   result,
   metaForm,
   setIsAnalysisModalOpen,
+  isArchiveMode = false,
 }) {
   // Memecah objek dual API hasil kiriman state global App.jsx atau arsip Supabase
   const pData = result?.portfolio_data;
@@ -41,7 +42,10 @@ export default function AnalysisPage({
       if (line.includes("━━━━━━━━━━━━━━━━━━")) {
         return;
       }
-      if (line.includes("KOMPOSISI PORTOFOLIO") || line.includes("DATA PORTOFOLIO")) {
+      if (
+        line.includes("KOMPOSISI PORTOFOLIO") ||
+        line.includes("DATA PORTOFOLIO")
+      ) {
         currentCategory = "stocks"; // Skip rendering teks mentah alokasi karena sudah ada tabel native
         return;
       }
@@ -89,7 +93,9 @@ export default function AnalysisPage({
 
     // Deteksi keberadaan short selling dari teks atau porsi alokasi murni
     const hasShortSelling =
-      (text && (text.toLowerCase().includes("short selling") || text.toLowerCase().includes("negatif"))) ||
+      (text &&
+        (text.toLowerCase().includes("short selling") ||
+          text.toLowerCase().includes("negatif"))) ||
       pData?.portfolio?.some((stock) => stock.weight < 0);
 
     return (
@@ -98,12 +104,18 @@ export default function AnalysisPage({
         {paragraphs.length > 0 && (
           <div className="bg-gradient-to-r from-blue-50/70 to-indigo-50/50 border border-blue-100/60 rounded-2xl p-6 shadow-sm animate-fade-in">
             <h4 className="text-lg font-black text-smart-navy mb-3 flex items-center gap-2">
-              <span className="animate-waving-hand text-xl">👋</span> Hallo Sobat SmartInvest!
+              <span className="animate-waving-hand text-xl">👋</span> Hallo
+              Sobat SmartInvest!
             </h4>
             <div className="flex flex-col gap-3">
               {paragraphs.slice(1).map((p, i) => (
-                <p key={i} className="text-sm text-slate-600 leading-relaxed font-semibold">
-                  {p.replace(/\*\*/g, "").replace("👋 Hallo Sobat SmartInvest!", "")}
+                <p
+                  key={i}
+                  className="text-sm text-slate-600 leading-relaxed font-semibold"
+                >
+                  {p
+                    .replace(/\*\*/g, "")
+                    .replace("👋 Hallo Sobat SmartInvest!", "")}
                 </p>
               ))}
             </div>
@@ -119,7 +131,13 @@ export default function AnalysisPage({
                 Alokasi Bobot Negatif (Short Selling) Terdeteksi! 🚨
               </p>
               <p className="text-xs text-slate-600 leading-relaxed font-bold">
-                Eits! Portofoliomu kali ini mengizinkan strategi **short selling** (bobot negatif) pada saham pilihan tertentu, nih! 😉 Strategi kece ini memproyeksikan cuan melimpah ketika harga sahamnya sedang turun, tapi ingat ya, risikonya jauh lebih tinggi dan butuh pengawasan super aktif. Sangat disarankan buat sobat investor yang udah berpengalaman dan punya profil risiko tinggi! 📈🔥
+                Eits! Portofoliomu kali ini mengizinkan strategi **short
+                selling** (bobot negatif) pada saham pilihan tertentu, nih! 😉
+                Strategi kece ini memproyeksikan cuan melimpah ketika harga
+                sahamnya sedang turun, tapi ingat ya, risikonya jauh lebih
+                tinggi dan butuh pengawasan super aktif. Sangat disarankan buat
+                sobat investor yang udah berpengalaman dan punya profil risiko
+                tinggi! 📈🔥
               </p>
             </div>
           </div>
@@ -138,9 +156,16 @@ export default function AnalysisPage({
                 const parts = bullet.split("**");
                 if (parts.length >= 3) {
                   const title = parts[1].replace(/:$/, "").trim();
-                  const description = parts.slice(2).join("**").replace(/^:\s*/, "").trim();
+                  const description = parts
+                    .slice(2)
+                    .join("**")
+                    .replace(/^:\s*/, "")
+                    .trim();
                   return (
-                    <div key={i} className="bg-white border border-blue-50/50 rounded-xl p-4 transition-all hover:scale-[1.005] hover:shadow-sm shadow-sm">
+                    <div
+                      key={i}
+                      className="bg-white border border-blue-50/50 rounded-xl p-4 transition-all hover:scale-[1.005] hover:shadow-sm shadow-sm"
+                    >
                       <h5 className="text-xs font-black text-indigo-700 mb-1.5 flex items-center gap-2">
                         <span>✨</span> {title}
                       </h5>
@@ -151,7 +176,10 @@ export default function AnalysisPage({
                   );
                 }
                 return (
-                  <div key={i} className="bg-white border border-blue-50/50 rounded-xl p-4">
+                  <div
+                    key={i}
+                    className="bg-white border border-blue-50/50 rounded-xl p-4"
+                  >
                     <p className="text-xs text-slate-600 leading-relaxed font-semibold">
                       {bullet.replace(/\*\*/g, "")}
                     </p>
@@ -170,7 +198,10 @@ export default function AnalysisPage({
             </p>
             <div className="flex flex-col gap-3">
               {tips.map((t, i) => (
-                <div key={i} className="flex items-start gap-3 bg-white/60 border border-white rounded-xl p-3 shadow-inner">
+                <div
+                  key={i}
+                  className="flex items-start gap-3 bg-white/60 border border-white rounded-xl p-3 shadow-inner"
+                >
                   <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
                     ✓
                   </div>
@@ -206,15 +237,26 @@ export default function AnalysisPage({
               Analisis Kuantitatif Portofolio & IHSG
             </h1>
             <p className="text-gray-400 text-sm mt-0.5">
-              Sinkronisasi Alokasi Kuantitatif Terpilih dengan Prediksi Arah AI Makro bursa.
+              Sinkronisasi Alokasi Kuantitatif Terpilih dengan Prediksi Arah AI
+              Makro bursa.
             </p>
           </div>
-          {analysisCompleted && result && (
+          {analysisCompleted && result && !isArchiveMode && (
             <button
               onClick={() => setIsAnalysisModalOpen(true)}
               className="bg-white border border-gray-200 text-gray-600 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-gray-50 flex items-center gap-2 shadow-sm transition-all text-center shrink-0"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                 <path d="M3 3v5h5" />
               </svg>
@@ -229,7 +271,18 @@ export default function AnalysisPage({
               onClick={() => setIsAnalysisModalOpen(true)}
               className="group w-24 h-24 bg-emerald-50 rounded-[2rem] flex items-center justify-center text-smart-green mb-6 shadow-inner hover:scale-105 hover:bg-emerald-100/70 transition-all border border-emerald-100"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:rotate-12 transition-transform">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="group-hover:rotate-12 transition-transform"
+              >
                 <rect x="4" y="4" width="16" height="16" rx="2" />
                 <rect x="9" y="9" width="6" height="6" />
                 <line x1="9" y1="1" x2="9" y2="4" />
@@ -242,9 +295,12 @@ export default function AnalysisPage({
                 <line x1="1" y1="15" x2="4" y2="15" />
               </svg>
             </button>
-            <h2 className="text-xl font-bold text-smart-navy mb-1">Optimasi Portofolio Anda</h2>
+            <h2 className="text-xl font-bold text-smart-navy mb-1">
+              Optimasi Portofolio Anda
+            </h2>
             <p className="text-gray-400 text-sm font-medium mb-6 text-center max-w-sm px-4">
-              Tentukan target indeks bursa dan model perhitungan manajemen risiko yang Anda inginkan.
+              Tentukan target indeks bursa dan model perhitungan manajemen
+              risiko yang Anda inginkan.
             </p>
             <button
               onClick={() => setIsAnalysisModalOpen(true)}
@@ -263,13 +319,22 @@ export default function AnalysisPage({
                   <span className="text-lg">🧮</span>
                 </div>
                 <div>
-                  <p className="text-sm font-black tracking-wide">Metode: {metaForm?.model_choice}</p>
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">Indeks {iData?.metadata?.index_choice} • BI Rate {iData?.metadata?.bi_rate}%</p>
+                  <p className="text-sm font-black tracking-wide">
+                    Metode: {metaForm?.model_choice}
+                  </p>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">
+                    Indeks {iData?.metadata?.index_choice} • BI Rate{" "}
+                    {iData?.metadata?.bi_rate}%
+                  </p>
                 </div>
               </div>
               <div className="text-left sm:text-right relative z-10">
-                <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Periode Historis</p>
-                <p className="text-xs font-bold text-white mt-0.5">{metaForm?.start_date} — {metaForm?.end_date}</p>
+                <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400">
+                  Periode Historis
+                </p>
+                <p className="text-xs font-bold text-white mt-0.5">
+                  {metaForm?.start_date} — {metaForm?.end_date}
+                </p>
               </div>
             </div>
 
@@ -277,7 +342,8 @@ export default function AnalysisPage({
             <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm w-full">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
                 <h3 className="font-bold text-smart-navy text-base flex items-center gap-2">
-                  <span>📊</span> Komposisi Alokasi Saham Pilihan ({metaForm?.model_choice})
+                  <span>📊</span> Komposisi Alokasi Saham Pilihan (
+                  {metaForm?.model_choice})
                 </h3>
               </div>
 
@@ -296,22 +362,41 @@ export default function AnalysisPage({
                   <tbody className="divide-y divide-gray-50 text-gray-600 font-medium">
                     {(() => {
                       const isCAPM = metaForm?.model_choice === "CAPM";
-                      const stocksToRender = isCAPM ? pData?.portfolio?.slice(0, 10) : pData?.portfolio;
+                      const stocksToRender = isCAPM
+                        ? pData?.portfolio?.slice(0, 10)
+                        : pData?.portfolio;
 
                       return stocksToRender?.map((stock, idx) => {
                         const isShort = stock.weight < 0;
                         return (
-                          <tr key={idx} className="hover:bg-gray-50/30 transition-colors">
+                          <tr
+                            key={idx}
+                            className="hover:bg-gray-50/30 transition-colors"
+                          >
                             <td className="p-4">
-                              <span className="font-bold text-smart-navy block">{stock.ticker?.replace(".JK", "")}</span>
-                              <span className="text-[10px] text-gray-400 font-normal block max-w-[150px] truncate">{stock.fullname}</span>
+                              <span className="font-bold text-smart-navy block">
+                                {stock.ticker?.replace(".JK", "")}
+                              </span>
+                              <span className="text-[10px] text-gray-400 font-normal block max-w-[150px] truncate">
+                                {stock.fullname}
+                              </span>
                             </td>
-                            <td className="p-4 text-gray-700">{stock.sector}</td>
-                            
+                            <td className="p-4 text-gray-700">
+                              {stock.sector}
+                            </td>
+
                             {/* ── BOBOT DAN ALOKASI OTOMATIS MERAH JIKA SHORT SELLING ── */}
-                            <td className={`p-4 font-bold ${isShort ? "text-red-500" : "text-gray-700"}`}>{fmtPersen(stock.weight)}</td>
-                            <td className={`p-4 text-right font-bold ${isShort ? "text-red-500" : "text-smart-green"}`}>{fmtRupiah(stock.allocation)}</td>
-                            
+                            <td
+                              className={`p-4 font-bold ${isShort ? "text-red-500" : "text-gray-700"}`}
+                            >
+                              {fmtPersen(stock.weight)}
+                            </td>
+                            <td
+                              className={`p-4 text-right font-bold ${isShort ? "text-red-500" : "text-smart-green"}`}
+                            >
+                              {fmtRupiah(stock.allocation)}
+                            </td>
+
                             {/* ── COLUMN TREN BADGE SOLID SINKRON ── */}
                             <td className="p-4 text-center relative">
                               <div className="inline-block group relative cursor-help">
@@ -326,16 +411,26 @@ export default function AnalysisPage({
                                 >
                                   {stock.trend || "Sideways"}
                                 </span>
-                                
+
                                 <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 hidden group-hover:block w-56 p-2.5 bg-slate-900 text-white text-[11px] rounded-lg shadow-xl z-50 text-left leading-normal font-normal pointer-events-none transition-all animate-fade-in">
                                   <p className="font-bold border-b border-slate-700 pb-1 mb-1 flex items-center gap-1 text-white">
-                                    <span>{stock.trend === "Bullish" ? "📈" : stock.trend === "Bearish" ? "📉" : "📊"}</span>
+                                    <span>
+                                      {stock.trend === "Bullish"
+                                        ? "📈"
+                                        : stock.trend === "Bearish"
+                                          ? "📉"
+                                          : "📊"}
+                                    </span>
                                     Arti Kondisi: {stock.trend || "Sideways"}
                                   </p>
                                   <p className="text-slate-300 font-medium">
-                                    {stock.trend === "Bullish" && "Harga saham cenderung naik secara konsisten dalam jangka pendek-menengah. Sinyal kuat untuk akumulasi/beli."}
-                                    {stock.trend === "Bearish" && "Harga saham cenderung turun secara konsisten. Risiko penurunan tinggi, disarankan waspada/hindari."}
-                                    {(stock.trend === "Sideways" || !stock.trend) && "Harga bergerak mendatar dalam rentang konsolidasi terbatas tanpa arah naik/turun yang dominan."}
+                                    {stock.trend === "Bullish" &&
+                                      "Harga saham cenderung naik secara konsisten dalam jangka pendek-menengah. Sinyal kuat untuk akumulasi/beli."}
+                                    {stock.trend === "Bearish" &&
+                                      "Harga saham cenderung turun secara konsisten. Risiko penurunan tinggi, disarankan waspada/hindari."}
+                                    {(stock.trend === "Sideways" ||
+                                      !stock.trend) &&
+                                      "Harga bergerak mendatar dalam rentang konsolidasi terbatas tanpa arah naik/turun yang dominan."}
                                   </p>
                                   <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-r-[6px] border-r-slate-900" />
                                 </div>
@@ -359,13 +454,22 @@ export default function AnalysisPage({
 
                                 <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 hidden group-hover:block w-56 p-2.5 bg-slate-900 text-white text-[11px] rounded-lg shadow-xl z-50 text-left leading-normal font-normal pointer-events-none transition-all animate-fade-in">
                                   <p className="font-bold border-b border-slate-700 pb-1 mb-1 flex items-center gap-1 text-white">
-                                    <span>{stock.recommendation === "BUY" ? "🟢" : stock.recommendation === "HOLD" ? "🟡" : "🔴"}</span>
+                                    <span>
+                                      {stock.recommendation === "BUY"
+                                        ? "🟢"
+                                        : stock.recommendation === "HOLD"
+                                          ? "🟡"
+                                          : "🔴"}
+                                    </span>
                                     Saran: {stock.recommendation || "HOLD"}
                                   </p>
                                   <p className="text-slate-300 font-medium">
-                                    {stock.recommendation === "BUY" && "Model menyarankan untuk melakukan pembelian alokasi dana secara penuh pada harga pasar saat ini karena momentum pertumbuhan."}
-                                    {stock.recommendation === "HOLD" && "Disarankan mempertahankan kepemilikan lot saham saat ini sembari memantau volatilitas, jangan menambah posisi dulu."}
-                                    {stock.recommendation === "AVOID" && "Sinyal risiko teknis terdeteksi tinggi. Sebaiknya hindari membeli saham ini untuk mengamankan modal tunai Anda."}
+                                    {stock.recommendation === "BUY" &&
+                                      "Model menyarankan untuk melakukan pembelian alokasi dana secara penuh pada harga pasar saat ini karena momentum pertumbuhan."}
+                                    {stock.recommendation === "HOLD" &&
+                                      "Disarankan mempertahankan kepemilikan lot saham saat ini sembari memantau volatilitas, jangan menambah posisi dulu."}
+                                    {stock.recommendation === "AVOID" &&
+                                      "Sinyal risiko teknis terdeteksi tinggi. Sebaiknya hindari membeli saham ini untuk mengamankan modal tunai Anda."}
                                   </p>
                                   <div className="absolute left-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[6px] border-l-slate-900" />
                                 </div>
@@ -377,7 +481,7 @@ export default function AnalysisPage({
                     })()}
                   </tbody>
                 </table>
-              </div> 
+              </div>
             </div>
 
             {/* Narasi AI Interpretasi */}
@@ -388,8 +492,13 @@ export default function AnalysisPage({
                     <span className="text-base">💡</span>
                   </div>
                   <div>
-                    <h3 className="font-bold text-white text-base">Interpretasi Pintar AI</h3>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Analisis Naratif oleh SmartInvest AI • {metaForm?.model_choice}</p>
+                    <h3 className="font-bold text-white text-base">
+                      Interpretasi Pintar AI
+                    </h3>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">
+                      Analisis Naratif oleh SmartInvest AI •{" "}
+                      {metaForm?.model_choice}
+                    </p>
                   </div>
                 </div>
                 <div className="p-6 flex flex-col gap-3">
@@ -406,12 +515,26 @@ export default function AnalysisPage({
 
 function TrendIcon({ up, size = 11 }) {
   return up ? (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+    >
       <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
       <polyline points="17 6 23 6 23 12" />
     </svg>
   ) : (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+    >
       <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
       <polyline points="17 18 23 18 23 12" />
     </svg>

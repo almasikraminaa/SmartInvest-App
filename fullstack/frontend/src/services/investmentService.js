@@ -1,66 +1,214 @@
-import { supabase } from './supabaseClient';
+import { supabase } from "./supabaseClient";
 
-// 1. Fungsi untuk menyimpan riwayat baru setelah user melakukan analisis (⚡ UPDATED ⚡)
-export const saveInvestmentHistory = async (
-  targetIndex, 
-  method, 
-  capital, 
-  expectedReturn, 
-  risk,
-  sharpeRatio,       // ⚡ Parameter Baru 1
-  marketSentiment,   // ⚡ Parameter Baru 2
-  biRate,            // ⚡ Parameter Baru 3
-  startDate,         // ⚡ Parameter Baru 4
-  endDate,           // ⚡ Parameter Baru 5
-  aiInterpretation,  // ⚡ Parameter Baru 6
-  portfolioAllocation // ⚡ Parameter Baru 7
-) => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
+const MAX_HISTORY = 20;
 
-    if (!user) throw new Error("User tidak terautentikasi.");
+// SAVE HISTORY
+export const saveInvestmentHistory =
+  async ({
+    targetIndex,
+    method,
+    capital,
+    expectedReturn,
+    risk,
+    sharpeRatio,
+    marketSentiment,
+    biRate,
+    startDate,
+    endDate,
+    aiInterpretation,
+    portfolioAllocation,
 
-    const { data, error } = await supabase
-      .from('investment_histories')
-      .insert([{
-        user_id: user.id,
-        target_index: targetIndex,
-        method: method,
-        capital: capital,
-        expected_return: expectedReturn,
-        risk: risk,
-        
-        // ⚡ MAP DATA BARU KE KOLOM SUPABASE ⚡
-        sharpe_ratio: sharpeRatio,
-        market_sentiment: marketSentiment,
-        bi_rate: biRate,
-        start_date: startDate,
-        end_date: endDate,
-        ai_interpretation: aiInterpretation,
-        portfolio_allocation: portfolioAllocation
-      }])
-      .select();
+    analysisForm,
+    analysisResult,
+  }) => {
+    try {
+      const {
+        data: { user },
+      } =
+        await supabase.auth.getUser();
 
-    if (error) throw error;
-    return { data, error: null };
-  } catch (error) {
-    console.error("Gagal menyimpan riwayat:", error.message);
-    return { data: null, error: error.message };
-  }
-};
+      if (!user) {
+        throw new Error(
+          "User tidak terautentikasi."
+        );
+      }
 
-// 2. Fungsi untuk mengambil semua daftar riwayat milik user yang sedang login
-export const fetchUserHistories = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('investment_histories')
-      .select('*')
-      .order('created_at', { ascending: false }); // Riwayat terbaru muncul paling atas
+      // ==========================
+      // CHECK HISTORY LIMIT
+      // ==========================
+      const {
+        data: histories,
+        error: historyError,
+      } = await supabase
+        .from(
+          "investment_histories"
+        )
+        .select(
+          "id, created_at"
+        )
+        .eq(
+          "user_id",
+          user.id
+        )
+        .order(
+          "created_at",
+          {
+            ascending: true,
+          }
+        );
 
-    if (error) throw error;
-    return { data, error: null };
-  } catch (error) {
-    console.error("Gagal mengambil riwayat:", error.message);
-    return { data: null, error: error.message };
-  }
-};
+      if (historyError)
+        throw historyError;
+
+      // jika sudah max
+      if (
+        histories &&
+        histories.length >=
+          MAX_HISTORY
+      ) {
+        const oldestHistory =
+          histories[0];
+
+        const {
+          error: deleteError,
+        } = await supabase
+          .from(
+            "investment_histories"
+          )
+          .delete()
+          .eq(
+            "id",
+            oldestHistory.id
+          );
+
+        if (deleteError)
+          throw deleteError;
+      }
+
+      // ==========================
+      // INSERT NEW HISTORY
+      // ==========================
+      const {
+        data,
+        error,
+      } = await supabase
+        .from(
+          "investment_histories"
+        )
+        .insert([
+          {
+            user_id: user.id,
+
+            target_index:
+              targetIndex,
+
+            method,
+            capital,
+
+            expected_return:
+              expectedReturn,
+
+            risk,
+
+            sharpe_ratio:
+              sharpeRatio,
+
+            market_sentiment:
+              marketSentiment,
+
+            bi_rate:
+              biRate,
+
+            start_date:
+              startDate,
+
+            end_date:
+              endDate,
+
+            ai_interpretation:
+              aiInterpretation,
+
+            portfolio_allocation:
+              portfolioAllocation,
+
+            analysis_form:
+              analysisForm,
+
+            analysis_result:
+              analysisResult,
+          },
+        ])
+        .select();
+
+      if (error) throw error;
+
+      return {
+        data,
+        error: null,
+      };
+    } catch (error) {
+      console.error(
+        "Gagal menyimpan riwayat:",
+        error.message
+      );
+
+      return {
+        data: null,
+        error: error.message,
+      };
+    }
+  };
+
+// FETCH HISTORY
+export const fetchUserHistories =
+  async () => {
+    try {
+      const {
+        data: { user },
+      } =
+        await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error(
+          "User tidak login."
+        );
+      }
+
+      const {
+        data,
+        error,
+      } = await supabase
+        .from(
+          "investment_histories"
+        )
+        .select("*")
+        .eq(
+          "user_id",
+          user.id
+        )
+        .order(
+          "created_at",
+          {
+            ascending: false,
+          }
+        );
+
+      if (error)
+        throw error;
+
+      return {
+        data,
+        error: null,
+      };
+    } catch (error) {
+      console.error(
+        "Gagal mengambil riwayat:",
+        error.message
+      );
+
+      return {
+        data: null,
+        error: error.message,
+      };
+    }
+  };
