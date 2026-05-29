@@ -17,14 +17,48 @@ import { Toaster } from "react-hot-toast";
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [analysisCompleted, setAnalysisCompleted] = useState(false); 
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
   const [preSelectedMethod, setPreSelectedMethod] = useState("");
   const [user, setUser] = useState(null);
-  const [analysisResult, setAnalysisResult] = useState(null);
-  const [metaForm, setMetaForm] = useState(null); 
   const [isLoading, setIsLoading] = useState(true);
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // ⚡ SEKSI PERSISTENCE: INISIALISASI STATE UTAMA DARI LOCALSTORAGE ⚡
+  // ══════════════════════════════════════════════════════════════════════════
+  const [analysisCompleted, setAnalysisCompleted] = useState(() => {
+    return localStorage.getItem("smartinvest_analysis_completed") === "true";
+  }); 
+
+  const [analysisResult, setAnalysisResult] = useState(() => {
+    const savedResult = localStorage.getItem("smartinvest_analysis_result");
+    return savedResult ? JSON.parse(savedResult) : null;
+  });
+
+  const [metaForm, setMetaForm] = useState(() => {
+    const savedMeta = localStorage.getItem("smartinvest_meta_form");
+    return savedMeta ? JSON.parse(savedMeta) : null;
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ⚡ EFFECT: MENGAWASI DAN MENYIMPAN STATE SAAT TERJADI KALKULASI BARU ⚡
+  // ══════════════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    localStorage.setItem("smartinvest_analysis_completed", analysisCompleted);
+    
+    if (analysisResult) {
+      localStorage.setItem("smartinvest_analysis_result", JSON.stringify(analysisResult));
+    } else {
+      localStorage.removeItem("smartinvest_analysis_result");
+    }
+
+    if (metaForm) {
+      localStorage.setItem("smartinvest_meta_form", JSON.stringify(metaForm));
+    } else {
+      localStorage.removeItem("smartinvest_meta_form");
+    }
+  }, [analysisCompleted, analysisResult, metaForm]);
+
+  // Auth Session Handler
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -43,9 +77,14 @@ function App() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    
+    // Bersihkan seluruh berkas pencatatan lokal saat user keluar akun
     setAnalysisCompleted(false);
     setAnalysisResult(null);
     setMetaForm(null);
+    localStorage.removeItem("smartinvest_analysis_completed");
+    localStorage.removeItem("smartinvest_analysis_result");
+    localStorage.removeItem("smartinvest_meta_form");
   };
 
   const formattedUser = user
@@ -76,7 +115,7 @@ function App() {
 
   const isLoggedIn = !!user;
 
-  // Jika belum login, tampilkan Landing Page dan halaman Auth
+
   if (!isLoggedIn) {
     return (
       <BrowserRouter>
@@ -92,7 +131,6 @@ function App() {
     );
   }
 
-  //  YANG BENAR: Tata letak utama ketika user sudah resmi Login
   return (
     <BrowserRouter>
       <Toaster position="top-right" />
@@ -116,7 +154,7 @@ function App() {
               
               <Route
                 path="/method"
-                element={
+                element = {
                   <MethodPage
                     setIsAnalysisModalOpen={setIsAnalysisModalOpen}
                     setPreSelectedMethod={setPreSelectedMethod}
@@ -125,7 +163,7 @@ function App() {
               />
               <Route
                 path="/analysis"
-                element={
+                element = {
                   <AnalysisPage
                     analysisCompleted={analysisCompleted}
                     setIsAnalysisModalOpen={setIsAnalysisModalOpen}
@@ -137,7 +175,7 @@ function App() {
               <Route path="/history" element={<HistoryPage />} />
               <Route
                 path="/recommendation"
-                element={
+                element = {
                   <RecommendationPage
                     analysisCompleted={analysisCompleted}
                     setIsAnalysisModalOpen={setIsAnalysisModalOpen}

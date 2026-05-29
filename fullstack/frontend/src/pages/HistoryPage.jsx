@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import AnalysisPage from './AnalysisPage'; // ⚡ IMPOR halaman analisis untuk dipakai sebagai view modal
 
 const ITEMS_PER_PAGE = 10;
 
@@ -14,6 +15,9 @@ export default function HistoryPage() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const filterRef = useRef(null);
+
+  // ⚡ STATE BARU: Menyimpan data item arsip aktif yang sedang dibuka detailnya
+  const [activeAnalysis, setActiveAnalysis] = useState(null);
 
   // Filter states
   const [filterIndex, setFilterIndex] = useState('');
@@ -48,7 +52,13 @@ export default function HistoryPage() {
         risk: item.risk,
         bi_rate: item.bi_rate != null ? item.bi_rate : 5.8,
         sharpe: item.sharpe_ratio,
-        sentiment: item.market_sentiment || 'Sideways'
+        sentiment: item.market_sentiment || 'Sideways',
+        
+        // ⚡ MAP DATA TAMBAHAN: Ambil kolom komposisi, narasi AI, dan tanggal dari Supabase
+        portfolio_allocation: item.portfolio_allocation,
+        ai_interpretation: item.ai_interpretation,
+        start_date: item.start_date,
+        end_date: item.end_date
       }));
 
       setHistoryData(mappedData);
@@ -122,6 +132,56 @@ export default function HistoryPage() {
     setIsDeleteOpen(false);
   };
 
+  // ⚡ FUNGSI UNPACKER BARU: Menyusun arsip database agar dikenali oleh AnalysisPage
+  const handleOpenDetails = (item) => {
+    let rawPortfolioArray = [];
+    let rawAiSummary = '';
+
+    // Ambil array saham secara fleksibel (mengatasi variasi struktur save data)
+    if (item.portfolio_allocation) {
+      if (Array.isArray(item.portfolio_allocation)) {
+        rawPortfolioArray = item.portfolio_allocation;
+      } else if (item.portfolio_allocation.portfolio_allocation && Array.isArray(item.portfolio_allocation.portfolio_allocation)) {
+        rawPortfolioArray = item.portfolio_allocation.portfolio_allocation;
+      } else if (item.portfolio_allocation.portfolio && Array.isArray(item.portfolio_allocation.portfolio)) {
+        rawPortfolioArray = item.portfolio_allocation.portfolio;
+      }
+    }
+
+    // Ambil string interpretasi Gemini AI
+    rawAiSummary = item.ai_interpretation || 
+                   item.portfolio_allocation?.portfolio_summary || 
+                   item.portfolio_allocation?.ai_interpretation || '';
+
+    const structuredResult = {
+      portfolio_data: {
+        portfolio: rawPortfolioArray,
+        portfolio_summary: rawAiSummary
+      },
+      ihsg_data: {
+        metadata: {
+          index_choice: item.target,
+          bi_rate: item.bi_rate
+        },
+        ihsg_analysis: {
+          market_trend: item.sentiment || 'Sideways'
+        }
+      }
+    };
+
+    const structuredMetaForm = {
+      model_choice: item.method,
+      start_date: item.start_date || 'N/A',
+      end_date: item.end_date || 'N/A',
+      analysisId: item.analysisId
+    };
+
+    setActiveAnalysis({
+      result: structuredResult,
+      metaForm: structuredMetaForm
+    });
+  };
+
   const fmtPersen = (val) => {
     if (val == null) return "N/A";
     if (Math.abs(val) > 1) return Number(val).toFixed(2) + "%";
@@ -169,7 +229,6 @@ export default function HistoryPage() {
               
               <div className="relative" ref={filterRef}>
                 <button onClick={() => setShowFilterPanel(!showFilterPanel)} className="bg-white border border-gray-200 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 text-gray-600 transition-colors flex items-center gap-2 shadow-sm">
-                  {/* ⚡ FIX: Perbaikan Tag SVG Self-Closing Polygon di bawah ini ⚡ */}
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
                   Filter Panel
                 </button>
@@ -210,7 +269,7 @@ export default function HistoryPage() {
           {/* Table Element */}
           <div className="rounded-2xl shadow-sm border border-gray-100 overflow-hidden bg-white">
             <div className="w-full overflow-x-auto">
-              <table className="w-full text-left text-sm whitespace-nowrap min-w-[1050px]">
+              <table className="w-full text-left text-sm whitespace-nowrap min-w-[1100px]">
                 <thead className="bg-gray-50/80 text-gray-500 uppercase text-xs font-semibold border-b border-gray-100">
                   <tr>
                     <th className="px-6 py-4 w-12"><input type="checkbox" onChange={handleSelectAll} checked={selectedRows.length === paginatedData.length && paginatedData.length > 0} className="w-4 h-4 cursor-pointer" /></th>
@@ -224,6 +283,7 @@ export default function HistoryPage() {
                     <th className="px-6 py-4">Sharpe Ratio</th>
                     <th className="px-6 py-4">BI Rate</th>
                     <th className="px-6 py-4">Sentiment</th>
+                    <th className="px-6 py-4 text-center">Aksi</th> {/* ⚡ Tambah Kolom Aksi */}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 font-medium text-gray-600">
@@ -245,11 +305,21 @@ export default function HistoryPage() {
                             item.sentiment === "Bullish" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-rose-50 text-rose-700 border border-rose-100"
                           }`}>{item.sentiment}</span>
                         </td>
+                        {/* ⚡ TOMBOL AKSI: Klik Mata untuk Buka Detail */}
+                        <td className="px-6 py-4 text-center">
+                          <button
+                            onClick={() => handleOpenDetails(item)}
+                            className="bg-gray-50 text-smart-navy hover:bg-blue-50 hover:text-blue-600 p-2 rounded-xl border border-gray-100 transition-all shadow-sm"
+                            title="Lihat Detail Hasil Analisis"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                          </button>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="11" className="text-center py-12 text-gray-400 text-xs">Tidak ada data riwayat optimasi portofolio.</td>
+                      <td colSpan="12" className="text-center py-12 text-gray-400 text-xs">Tidak ada data riwayat optimasi portofolio.</td>
                     </tr>
                   )}
                 </tbody>
@@ -291,6 +361,39 @@ export default function HistoryPage() {
             <div className="flex justify-end gap-3 w-full">
               <button onClick={() => setIsDeleteOpen(false)} className="flex-1 bg-gray-100 text-gray-600 px-4 py-2.5 rounded-xl text-sm font-bold">Batal</button>
               <button onClick={handleDeleteConfirm} className="flex-1 bg-red-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-colors">Hapus Permanen</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ⚡ MODAL VIEW POPUP DETAIL ARSIP: Memanggil Ulang Komponen AnalysisPage ⚡ */}
+      {activeAnalysis && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-smart-navy/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col animate-fade-in">
+            
+            {/* Header Modal - Sticky */}
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-center z-10">
+              <div>
+                <h3 className="text-lg font-bold text-smart-navy">Arsip Hasil Analisis Kuantitatif</h3>
+                <p className="text-gray-400 text-xs">ID Catatan: <span className="font-mono font-bold text-slate-600">{activeAnalysis.metaForm.analysisId}</span></p>
+              </div>
+              <button 
+                onClick={() => setActiveAnalysis(null)}
+                className="text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-200/70 p-2 rounded-xl transition-all"
+                title="Tutup Detil"
+              >
+                <svg xmlns="http://www.w3.org/2000/xl" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            {/* Body Modal - Me-render AnalysisPage secara modular */}
+            <div className="p-2 bg-gray-50/30 flex-1">
+              <AnalysisPage 
+                analysisCompleted={true}
+                result={activeAnalysis.result}
+                metaForm={activeAnalysis.metaForm}
+                setIsAnalysisModalOpen={() => {}} // Sengaja dikosongkan agar button Hitung Ulang tidak aktif di mode arsip
+              />
             </div>
           </div>
         </div>

@@ -8,6 +8,9 @@ import json
 import math
 from datetime import datetime
 from pathlib import Path
+from dateutil.relativedelta import relativedelta
+import os
+from supabase import create_client, Client
 
 from services.genai_service import (
     generate_market_summary,
@@ -20,6 +23,18 @@ from utils.feature_engineering import feature_engineering
 from utils.portfolio_models import compare_all_models, run_selected_model
 from services.stock_analysis_service import predict_stock_trend
 from utils.portfolio_scoring import composite_portfolio_scoring
+
+# Ambil kredensial lingkungan dari file .env backend
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+# Validasi fail-safe jika env lupa terisi saat server dinyalakan
+if not SUPABASE_URL or not SUPABASE_KEY:
+    print("⚠️ Peringatan: SUPABASE_URL atau SUPABASE_KEY tidak ditemukan di .env backend!")
+    supabase: Client = None
+else:
+    # Inisialisasi client Supabase resmi untuk Python
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ==============================================================================
 # TICKER METADATA MAPPING (LQ45 & IDX30 Stocks)
@@ -75,48 +90,21 @@ TICKER_DETAILS = {
 # ==========================
 # PATH
 # ==========================
-
-BASE_DIR = (
-    Path(__file__)
-    .resolve()
-    .parent.parent
-)
-
-MODEL_PATH = (
-    BASE_DIR
-    / "models"
-    / "ihsg_best_model_3class.keras"
-)
-
-SCALER_PATH = (
-    BASE_DIR
-    / "assets"
-    / "ihsg_scaler_global.pkl"
-)
-
-DATA_PATH = (
-    BASE_DIR
-    / "data"
-    / "market_price_ihsg.csv"
-)
-
+BASE_DIR = Path(__file__).resolve().parent.parent
+MODEL_PATH = BASE_DIR / "models" / "ihsg_best_model_3class.keras"
+SCALER_PATH = BASE_DIR / "assets" / "ihsg_scaler_global.pkl"
+DATA_PATH = BASE_DIR / "data" / "market_price_ihsg.csv"
 
 # ==============================================================================
 # SAFE LOAD MODEL FOR .keras FORMAT (ZIP CONFIG CLEANER VIA OFFICIAL API)
 # ==============================================================================
-
 def safe_load_ihsg_model(model_path):
-    """
-    Membuka file .keras (zip), membaca config.json, membersihkan parameter 
-    lama yang tidak kompatibel, mendeserialisasi struktur model, dan memuat bobotnya.
-    """
     with zipfile.ZipFile(model_path, "r") as z:
         config_bytes = z.read("config.json")
         config_dict = json.loads(config_bytes.decode("utf-8"))
 
     def clean_config(node):
         if isinstance(node, dict):
-            # Hapus seluruh parameter pengganggu warisan Keras 2 secara rekursif
             node.pop("quantization_config", None)
             node.pop("use_gate", None)
             node.pop("renorm", None)
@@ -129,37 +117,14 @@ def safe_load_ihsg_model(model_path):
                 clean_config(item)
 
     clean_config(config_dict)
-    
-    # Rekonstruksi arsitektur model dari konfigurasi yang sudah steril
     model = keras.saving.deserialize_keras_object(config_dict)
-    
-    # Muat bobot (weights) secara native langsung dari file .keras asli
     model.load_weights(model_path)
     return model
 
-
-# ==========================
-# LOAD MODEL EXECUTION
-# ==========================
-
-# Eksekusi pemuatan model IHSG menggunakan sanitizer aman kita
+# Load Model Execution
 model = safe_load_ihsg_model(str(MODEL_PATH))
-
-scaler = joblib.load(
-    SCALER_PATH
-)
-
-ihsg_data = pd.read_csv(
-    DATA_PATH,
-    index_col=0,
-    parse_dates=True,
-    engine="python"
-)
-
-
-# ==========================
-# FEATURE ENGINEERING
-# ==========================
+scaler = joblib.load(SCALER_PATH)
+ihsg_data = pd.read_csv(DATA_PATH, index_col=0, parse_dates=True, engine="python")
 
 def build_ihsg_features(df):
     df = df.copy()
@@ -178,11 +143,6 @@ def build_ihsg_features(df):
     df["Trend_Strength"] = df["MA_Gap"].abs()
 
     return df.dropna()
-
-
-# ==========================
-# PREDICT IHSG
-# ==========================
 
 def predict_ihsg(end_date=None):
     feature_cols = [
@@ -212,10 +172,6 @@ def predict_ihsg(end_date=None):
     trend = labels[idx]
     confidence = round(float(prediction[idx]), 4)
 
-    # ==========================
-    # METHOD RECOMMENDATION
-    # ==========================
-
     if trend == "Bullish":
         recommended_method = "SIM"
         market_condition = "Pasar sedang bullish"
@@ -228,10 +184,6 @@ def predict_ihsg(end_date=None):
         recommended_method = "MVEP"
         market_condition = "Pasar sideways"
         reason = "MVEP membantu optimasi risk-return saat pasar stabil."
-
-    # ==========================
-    # GENAI MARKET SUMMARY
-    # ==========================
 
     market_summary = generate_market_summary(
         market_trend=trend,
@@ -251,15 +203,7 @@ def predict_ihsg(end_date=None):
         "market_summary": market_summary
     }
 
-
-# ==============================================================================
-# PIPELINE: PREDICT IHSG & PORTFOLIO ALLOCATION
-# ==============================================================================
-
 def clean_nan(obj):
-    """
-    Recursively replace NaN and Inf to None for JSON compliance
-    """
     if isinstance(obj, dict):
         return {k: clean_nan(v) for k, v in obj.items()}
     elif isinstance(obj, list):
@@ -270,63 +214,35 @@ def clean_nan(obj):
         return obj
     return obj
 
-
+# ==============================================================================
+# PIPELINE: PREDICT IHSG & PORTFOLIO ALLOCATION (⚡ REPAIRED SINKRONISASI TOTAL ⚡)
+# ==============================================================================
 def predict_ihsg_with_portfolio(
     index_choice: str,
     start_date: str,
     end_date: str,
-    investment_amount: float
+    investment_amount: float,
+    user_id: str = None # ⚡ Argumen user_id untuk menerima kiriman data form React
 ):
-        # ==========================
-    # VALIDASI PERIODE
-    # ==========================
-
-    start_dt = datetime.strptime(
-        start_date,
-        "%Y-%m-%d"
-    )
-
-    end_dt = datetime.strptime(
-        end_date,
-        "%Y-%m-%d"
-    )
+    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+    end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+    period_years = (end_dt - start_dt).days / 365.25
 
     # tanggal akhir harus > awal
     if end_dt <= start_dt:
-        raise ValueError(
-            "Tanggal akhir harus "
-            "setelah tanggal mulai"
-        )
+        raise ValueError("Tanggal akhir harus setelah tanggal mulai")
 
-    delta = relativedelta(
-        end_dt,
-        start_dt
-    )
-
-    total_months = (
-        delta.years * 12
-        + delta.months
-    )
+    delta = relativedelta(end_dt, start_dt)
+    total_months = (delta.years * 12 + delta.months)
 
     # minimal 6 bulan
     if total_months < 6:
-        raise ValueError(
-            "Periode minimal "
-            "6 bulan"
-        )
+        raise ValueError("Periode minimal 6 bulan")
 
     # maksimal 5 tahun
-    if delta.years > 5 or (
-        delta.years == 5
-        and (
-            delta.months > 0
-            or delta.days > 0
-        )
-    ):
-        raise ValueError(
-            "Periode maksimal "
-            "5 tahun"
-        )
+    if delta.years > 5 or (delta.years == 5 and (delta.months > 0 or delta.days > 0)):
+        raise ValueError("Periode maksimal 5 tahun")
+
     # ==========================
     # 1. LOAD DATA
     # ==========================
@@ -385,10 +301,9 @@ def predict_ihsg_with_portfolio(
         }
 
     # ==========================
-    # 6. PICK BEST METHOD BASED ON TREND (Specific Indicator Scoring)
+    # 6. PICK BEST METHOD BASED ON TREND
     # ==========================
     scores = {}
-
     max_sharpe = max(p["sharpe_ratio"] for p in portfolios.values())
     min_risk = min(p["annual_risk"] for p in portfolios.values())
     max_risk = max(p["annual_risk"] for p in portfolios.values())
@@ -399,7 +314,6 @@ def predict_ihsg_with_portfolio(
         elif market_trend == "Bearish":
             scores[name] = round(float(p["annual_risk"]), 4)
         else:
-            # Sideways / Neutral
             sh_score = p["sharpe_ratio"] / max_sharpe if max_sharpe > 0 else 0
             rk_score = 1 - ((p["annual_risk"] - min_risk) / (max_risk - min_risk)) if max_risk > min_risk else 1
             scores[name] = round(0.6 * sh_score + 0.4 * rk_score, 3)
@@ -413,7 +327,6 @@ def predict_ihsg_with_portfolio(
         trend_label = "TURUN (Bearish)"
         selection_reason = f"IHSG diprediksi {trend_label} → Fokus Risk / Volatilitas terendah: {best_method} dengan skor {scores[best_method]:.4f} (SIM: {scores.get('SIM', 0.0):.4f}, MVEP: {scores.get('MVEP', 0.0):.4f}, CAPM: {scores.get('CAPM', 0.0):.4f})"
     else:
-        # Sideways / Neutral
         best_method = max(scores, key=scores.get)
         trend_label = "STABIL (Sideways)"
         selection_reason = f"IHSG diprediksi {trend_label} → Keseimbangan Sharpe Ratio & Risk (Hybrid): {best_method} dengan skor {scores[best_method]:.3f} (SIM: {scores.get('SIM', 0.0):.3f}, MVEP: {scores.get('MVEP', 0.0):.3f}, CAPM: {scores.get('CAPM', 0.0):.3f})"
@@ -428,26 +341,24 @@ def predict_ihsg_with_portfolio(
     )
 
     # ==========================
-    # 8. FILTER NON-ZERO WEIGHTS (ALLOW SHORT SELLING)
+    # 8. FILTER NON-ZERO WEIGHTS
     # ==========================
     weights_df = result["weights"]
     weights_df = weights_df[weights_df["Weight"].abs() > 0.0001]
 
     # ==========================
-    # 9. BUILD PORTFOLIO LIST WITH TREND
+    # 9. BUILD PORTFOLIO LIST
     # ==========================
     portfolio = []
     for _, row in weights_df.iterrows():
         ticker = row["Ticker"]
         stock_prediction = predict_stock_trend(ticker)
 
-        # Get current price
         try:
             current_price = float(filtered_result["filtered_price"][ticker].dropna().iloc[-1])
         except Exception:
             current_price = 0.0
 
-        # Calculate lot allocation (1 lot = 100 shares)
         if current_price > 0:
             shares = row["Allocation"] / current_price
             lot = round(shares / 100, 2)
@@ -457,7 +368,6 @@ def predict_ihsg_with_portfolio(
             lot = 0.0
             integer_lot = 0
 
-        # Fetch metadata
         meta = TICKER_DETAILS.get(ticker, {"fullname": f"PT {ticker.split('.')[0]} Tbk", "sector": "Lainnya"})
 
         item = {
@@ -487,7 +397,6 @@ def predict_ihsg_with_portfolio(
     method_comparison = []
     for name, p in portfolios.items():
         final_score = float(scores.get(name, 0.0))
-
         comp_beta = None
         comp_alpha = None
         if name == "SIM":
@@ -511,7 +420,7 @@ def predict_ihsg_with_portfolio(
         })
 
     # ==========================
-    # 11. SUMMARY METRICS
+    # 11. SUMMARY METRICS & INJECTION RATE
     # ==========================
     annual_return_pct = round(float(result["portfolio_annual_return"]) * 100, 2)
     annual_risk_pct = round(float(result["portfolio_annual_risk"]) * 100, 2)
@@ -522,7 +431,6 @@ def predict_ihsg_with_portfolio(
     alpha_avg = round(sum(alpha_values) / len(alpha_values), 4) if alpha_values else None
     beta_avg = round(sum(beta_values) / len(beta_values), 4) if beta_values else None
 
-    # Mengambil risk-free rate dinamis dari data BI rate
     risk_free_rate_pct = float(feature_result["annual_risk_free_rate"] * 100)
     bi_rate_pct = round(risk_free_rate_pct, 3)
 
@@ -535,23 +443,17 @@ def predict_ihsg_with_portfolio(
     # 12. GENAI INTERPRETATION
     # ==========================
     try:
-        # Formulate variables for recommendation summary
         horizon_yr = round(period_years, 1)
         gain_ex = int(investment_amount * float(result["portfolio_annual_return"]))
         loss_ex = int(investment_amount * float(result["portfolio_annual_risk"]))
         
-        alloc_items = [
-            f"{item['ticker'].replace('.JK', '')} ({item['weight']*100:.1f}%)"
-            for item in portfolio
-        ]
-        alloc_str = ", ".join(alloc_items)
+        alloc_items = [f"* {item['ticker'].replace('.JK', '')} ({item['weight']*100:.1f}%)" for item in portfolio]
+        alloc_str = "\n".join(alloc_items)
 
         comparison_lines = []
         for m in method_comparison:
             best_tag = " [Metode Terbaik]" if m["is_best"] else ""
-            comparison_lines.append(
-                f"- Metode {m['method']}: Expected Return {m['return']*100:.1f}%, Risiko {m['risk']*100:.1f}%, Sharpe Ratio {m['sharpe']:.3f}{best_tag}"
-            )
+            comparison_lines.append(f"- Metode {m['method']}: Expected Return {m['return']*100:.1f}%, Risiko {m['risk']*100:.1f}%, Sharpe Ratio {m['sharpe']:.3f}{best_tag}")
         comparison_str = "\n".join(comparison_lines)
 
         market_trend_str = f"naik ({market_trend})" if market_trend == "Bullish" else f"turun ({market_trend})" if market_trend == "Bearish" else f"sideways ({market_trend})"
@@ -569,16 +471,17 @@ def predict_ihsg_with_portfolio(
             gain_ex=gain_ex,
             loss_ex=loss_ex,
             alloc_str=alloc_str,
-            comparison_str=comparison_str
+            comparison_str=comparison_str,
+            investment_amount=int(investment_amount),
+            index_choice=index_choice
         )
     except Exception as e:
         ai_interpretation = f"GenAI Error: {str(e)}"
 
     # ==========================
-    # 13. CONSTRUCT OUTPUT JSON
+    # 13. CONSTRUCT OUTPUT JSON (⚡ RUMUS RUPIAH DI-SINKRONKAN ⚡)
     # ==========================
     trading_days = filtered_result["filtering_summary"]["trading_days_used"]
-
     portfolio_allocation = []
     for item in portfolio:
         portfolio_allocation.append({
@@ -596,11 +499,7 @@ def predict_ihsg_with_portfolio(
             "recommendation": item["recommendation"]
         })
 
-    description_map = {
-        "Bullish": "IHSG Diprediksi NAIK",
-        "Bearish": "IHSG Diprediksi TURUN",
-        "Sideways": "IHSG Diprediksi STABIL"
-    }
+    description_map = {"Bullish": "IHSG Diprediksi NAIK", "Bearish": "IHSG Diprediksi TURUN", "Sideways": "IHSG Diprediksi STABIL"}
 
     output = {
         "status": "success",
@@ -633,6 +532,7 @@ def predict_ihsg_with_portfolio(
         },
         "investment_simulation": {
             "initial_amount": int(investment_amount),
+            # ⚡ RUMUS FIX: Kalikan murni modal dengan desimal riil dari dataframe/array bursa
             "potential_gain": int(investment_amount * float(result["portfolio_annual_return"])),
             "potential_loss": int(investment_amount * float(result["portfolio_annual_risk"]))
         },
@@ -641,5 +541,32 @@ def predict_ihsg_with_portfolio(
         "ai_interpretation": ai_interpretation
     }
 
-    return clean_nan(output)
+    # Sterilkan data dari nilai NaN / Infinity sebelum masuk ke database
+    cleaned_output = clean_nan(output)
 
+    # ==============================================================================
+    # ⚡ AUTOSAVE BACKEND-DRIVEN KE SUPABASE (BERHASIL DIREKONSTRUKSI) ⚡
+    # ==============================================================================
+    if supabase is not None and user_id is not None:
+        try:
+            history_payload = {
+                "user_id": user_id,
+                "target_index": index_choice.upper(),
+                "method": best_method,
+                "capital": int(investment_amount),
+                "expected_return": float(cleaned_output["best_method_metrics"]["expected_return"]),
+                "risk": float(cleaned_output["best_method_metrics"]["annual_risk"]),
+                "sharpe_ratio": float(cleaned_output["best_method_metrics"]["sharpe_ratio"]),
+                "market_sentiment": market_trend,
+                "bi_rate": float(cleaned_output["metadata"]["bi_rate"]),
+                "start_date": start_date,
+                "end_date": end_date,
+                "ai_interpretation": cleaned_output["ai_interpretation"],
+                "portfolio_allocation": cleaned_output  # Menyimpan bundle response JSONB utuh
+            }
+            supabase.table("investment_histories").insert(history_payload).execute()
+            print("🎉 Sukses: Hasil kalkulasi portofolio berhasil disimpan otomatis ke database!")
+        except Exception as db_err:
+            print(f"⚠️ Peringatan: Gagal melakukan autosave ke Supabase: {str(db_err)}")
+
+    return cleaned_output

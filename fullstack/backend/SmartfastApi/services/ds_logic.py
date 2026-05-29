@@ -795,7 +795,10 @@ def analyze_portfolio_logic(
             confidence=confidence,
             historical_period=historical_period,
             portfolio_allocation=portfolio_allocation,
-            stock_details=stock_details
+            stock_details=stock_details,
+            model_choice=model_choice,
+            investment_amount=investment_amount,
+            index_choice=index_choice      
         )
     else:
         portfolio_summary = f"Portofolio dioptimalkan menggunakan metode {result['method']} dengan Expected Return {annual_return}% dan Risiko {annual_risk}%."

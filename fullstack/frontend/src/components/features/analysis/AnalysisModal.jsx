@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { analyzePortfolio } from "../../../services/portfolioService";
 import { predictIHSG } from "../../../services/ihsgService";
 import { supabase } from "../../../lib/supabase";
+import { saveInvestmentHistory } from "../../../services/investmentService";
 
 const METHODS = [
   { value: "", label: "Pilih model analisis..." },
@@ -122,7 +123,6 @@ export default function AnalysisModal({
     const localErrors = validateForm();
     if (Object.keys(localErrors).length > 0) {
       setErrors(localErrors);
-      // Tampilkan toast error pertama agar user tahu apa yang kurang
       toast.error(Object.values(localErrors)[0]);
       return;
     }
@@ -131,6 +131,7 @@ export default function AnalysisModal({
     setIsLoading(true);
 
     try {
+      // 1. Eksekusi tembakan paralel ke API Backend FastAPI
       const [portfolioRes, ihsgRes] = await Promise.all([
         analyzePortfolio(formData),
         predictIHSG(formData),
@@ -141,6 +142,7 @@ export default function AnalysisModal({
         ihsg_data: ihsgRes,
       };
 
+      // 2. Kalkulasi metrik penyesuaian model untuk backup data
       const selectedMetrics = ihsgRes?.method_comparison?.find(
         (m) => m.method === formData.model_choice,
       );
@@ -158,27 +160,32 @@ export default function AnalysisModal({
           portfolioRes?.sharpeRatio ||
           0;
 
+      // 3. PANGGIL SERVICE SERVICE BARU UNTUK SAVE AMAN KE SUPABASE
       try {
-        const { data: userData } = await supabase.auth.getUser();
+        const { error: dbError } = await saveInvestmentHistory(
+          formData.index_choice, // targetIndex
+          formData.model_choice, // method
+          Number(formData.investment_amount), // capital
+          Number(finalReturn), // expectedReturn
+          Number(finalRisk), // risk
+          Number(finalSharpe), // sharpeRatio
+          ihsgRes?.ihsg_analysis?.market_trend || "Sideways", // marketSentiment
+          Number(ihsgRes?.metadata?.bi_rate || 5.8), // biRate
+          formData.start_date, // startDate
+          formData.end_date, // endDate
+          ihsgRes?.ai_interpretation || "", // aiInterpretation
+          portfolioRes || combinedResponse, // portfolioAllocation
+        );
 
-        await supabase.from("investment_histories").insert({
-          user_id: userData?.user?.id,
-          target_index: formData.index_choice,
-          method: formData.model_choice,
-          capital: Number(formData.investment_amount),
-          expected_return: Number(finalReturn),
-          risk: Number(finalRisk),
-          bi_rate: Number(ihsgRes?.metadata?.bi_rate || 5.8),
-          sharpe_ratio: Number(finalSharpe),
-          market_sentiment: ihsgRes?.ihsg_analysis?.market_trend || "N/A",
-        });
+        if (dbError) throw new Error(dbError);
       } catch (dbError) {
         console.error(
-          "Gagal menyimpan ke investment_histories Supabase:",
+          "Gagal menyimpan ke investment_histories Supabase via service:",
           dbError,
         );
       }
 
+      // 4. Salurkan hasil kalkulasi ke state global App.jsx dan tutup tirai modal
       toast.success("Analisis Ganda Berhasil Terintegrasi!");
       onAnalysisComplete(combinedResponse, formData);
       onClose();
@@ -204,18 +211,20 @@ export default function AnalysisModal({
             {/* Glowing outer pulse rings */}
             <div className="absolute w-24 h-24 bg-emerald-500/10 rounded-full animate-ping" />
             <div className="absolute w-16 h-16 bg-smart-navy/5 rounded-full animate-pulse" />
-            
+
             {/* Rotating central ring */}
             <div className="w-14 h-14 border-4 border-smart-green border-t-transparent rounded-full animate-spin shadow-md z-10" />
             <span className="absolute text-xl">🤖</span>
           </div>
-          
+
           <div>
             <h3 className="text-lg font-extrabold text-smart-navy mb-1.5 animate-pulse">
               SmartInvest AI Sedang Bekerja...
             </h3>
             <p className="text-gray-400 text-xs max-w-xs mx-auto leading-relaxed">
-              Harap tunggu sebentar. Sistem AI kami sedang memuat data historis bursa dan menyinkronkan metode alokasi portofolio terbaik untuk Anda.
+              Harap tunggu sebentar. Sistem AI kami sedang memuat data historis
+              bursa dan menyinkronkan metode alokasi portofolio terbaik untuk
+              Anda.
             </p>
           </div>
 
@@ -335,7 +344,7 @@ export default function AnalysisModal({
                   />
                 </div>
               </div>
-              
+
               {/* radio button */}
               <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3 px-1">
                 <label className="flex items-center gap-1.5 cursor-pointer">
@@ -397,7 +406,8 @@ export default function AnalysisModal({
 
               {/* ⚡ REVISI 3: Keterangan Pilihan Cepat ⚡ */}
               <p className="text-[10px] text-gray-400 mt-2.5 leading-relaxed italic">
-                * Pilihan cepat akan menarik data historis mundur dari tanggal hari ini (contoh: 6 Bulan / 1 Tahun Terakhir).
+                * Pilihan cepat akan menarik data historis mundur dari tanggal
+                hari ini (contoh: 6 Bulan / 1 Tahun Terakhir).
               </p>
             </div>
 
@@ -460,7 +470,8 @@ export default function AnalysisModal({
 
                     setFormData((prev) => ({
                       ...prev,
-                      investment_amount: rawValue === "" ? "" : Number(rawValue),
+                      investment_amount:
+                        rawValue === "" ? "" : Number(rawValue),
                     }));
                   }}
                   disabled={isLoading}

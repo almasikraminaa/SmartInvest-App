@@ -23,7 +23,7 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
           onClick={onOpenAnalysisModal}
           className="bg-smart-navy text-white px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse">
             <rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="15" x2="23" y2="15"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="15" x2="4" y2="15"/>
           </svg>
           Mulai Analysis
@@ -33,24 +33,24 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
   }
 
   const COLORS = [
-  "#10b981", // Emerald
-  "#3b82f6", // Blue
-  "#f59e0b", // Amber
-  "#ef4444", // Rose
-  "#8b5cf6", // Purple
-  "#ec4899", // Pink
-  "#06b6d4", // Cyan
-  "#14b8a6", // Teal
-  "#f97316", // Orange
-  "#64748b"  // Slate
-];
+    "#10b981", // Emerald
+    "#3b82f6", // Blue
+    "#f59e0b", // Amber
+    "#ef4444", // Rose
+    "#8b5cf6", // Purple
+    "#ec4899", // Pink
+    "#06b6d4", // Cyan
+    "#14b8a6", // Teal
+    "#f97316", // Orange
+    "#64748b"  // Slate
+  ];
 
-// Helper Formatter Pintar
+  // Helper Formatter Pintar
   const fmtPersen = (val) => {
     if (val == null) return "N/A";
-    if (Math.abs(val) > 1) return Number(val).toFixed(2) + "%";
-    return (val * 100).toFixed(2) + "%";
+    return (Number(val) * 100).toFixed(2) + "%";
   };
+  
   const fmtNum = (val) => (val != null ? Number(val).toFixed(4) : "N/A");
   const fmtRupiah = (val) => val != null ? "Rp " + Number(val).toLocaleString("id-ID") : "Rp 0";
   const fmtScore = (val) => val != null ? Number(val).toFixed(4) : "N/A";
@@ -61,17 +61,22 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
 
     const lines = text.split("\n").map(l => l.trim());
     
-    // ⚡ REVISI 8: DIRECT METRIC INJECTION (MENGHINDARI SALAH PARSING AI) ⚡
+    // ── DIRECT METRIC INJECTION: LANGSUNG SESUAI PROPERTI JSON PAYLOAD BACKEND ──
     const expectedReturn = fmtPersen(iData?.best_method_metrics?.expected_return);
     const risiko = fmtPersen(iData?.best_method_metrics?.annual_risk);
     const sharpe = fmtNum(iData?.best_method_metrics?.sharpe_ratio);
     const gain = fmtRupiah(iData?.investment_simulation?.potential_gain);
     const loss = fmtRupiah(iData?.investment_simulation?.potential_loss);
+    const initialAmountStr = fmtRupiah(iData?.investment_simulation?.initial_amount);
+
+    const hasShortSelling = 
+      (text && (text.toLowerCase().includes("short selling") || text.toLowerCase().includes("negatif"))) ||
+      (iData?.portfolio_allocation?.some(stock => stock.weight < 0));
 
     const paragraphs = [];
     const terms = [];
     const tips = [];
-    const stocks = [];
+    const comparisons = [];
     const disclaimer = [];
 
     let currentCategory = "intro";
@@ -84,7 +89,7 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
       if (line.includes("━━━━━━━━━━━━━━━━━━")) {
         return;
       }
-      if (line.includes("DATA PENTING") || line.includes("HASIL PORTOFOLIO") || line.includes("DATA ANALISIS") || line.includes("DATA PENTING")) {
+      if (line.includes("DATA PENTING") || line.includes("HASIL PORTOFOLIO") || line.includes("DATA ANALISIS")) {
         currentCategory = "metrics";
         return;
       }
@@ -92,11 +97,15 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
         currentCategory = "stocks";
         return;
       }
-      if (line.includes("ISTILAH INVESTASI") || line.includes("🎯") || line.includes("Jelaskan arti istilah") || line.includes("Penjelasan istilah")) {
+      if (line.includes("ISTILAH INVESTASI")) {
         currentCategory = "terms";
         return;
       }
-      if (line.includes("tips") || line.includes("💡") || line.includes("Strategi") || line.includes("Beberapa tips")) {
+      if (line.includes("PERBANDINGAN METODE") || line.includes("PERBANDINGAN METODE LAIN")) {
+        currentCategory = "comparison";
+        return;
+      }
+      if (line.includes("tips yang harus Kamu lakukan") || line.includes("Tips Penting Rekomendasi") || line.includes("Beberapa tips")) {
         currentCategory = "tips";
         return;
       }
@@ -113,24 +122,28 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
           const parts = cleanLine.split(":");
           if (parts.length >= 2) {
             terms.push({
-              name: parts[0].replace(/\*\*/g, "").trim(),
-              description: parts.slice(1).join(":").trim()
+              name: parts[0].replace(/\*\fail/g, "").replace(/\*\*/g, "").trim(),
+              description: parts.slice(1).join(":").replace(/\*\*/g, "").trim()
             });
           } else {
-            terms.push({ name: "Istilah", description: cleanLine });
+            terms.push({ name: "Istilah", description: cleanLine.replace(/\*\*/g, "") });
           }
-        } else if (currentCategory === "stocks") {
-          stocks.push(cleanLine);
         } else if (currentCategory === "tips") {
-          tips.push(cleanLine);
-        } else {
+          tips.push(cleanLine.replace(/\*\*/g, ""));
+        } else if (currentCategory === "comparison") {
+          comparisons.push(cleanLine);
+        } else if (currentCategory === "intro") {
           paragraphs.push(line);
         }
       } else if (line.length > 0) {
-        if (line.includes("Expected Return") || line.includes("Risiko") || line.includes("Sharpe Ratio") || line.includes("potensi untung") || line.includes("potensi turun")) {
+        if (currentCategory === "metrics" || line.startsWith("💰") || line.startsWith("📉") || line.startsWith("🎯") || line.startsWith("💸")) {
           return;
         }
-        paragraphs.push(line);
+        if (currentCategory === "comparison") {
+          comparisons.push(line);
+        } else if (currentCategory === "intro") {
+          paragraphs.push(line);
+        }
       }
     });
 
@@ -138,16 +151,32 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
       <div className="flex flex-col gap-6 w-full text-slate-700">
         {/* Welcome / Greeting Banner */}
         {paragraphs.length > 0 && (
-          <div className="bg-gradient-to-r from-blue-50/70 to-indigo-50/50 border border-blue-100/60 rounded-2xl p-6 shadow-sm">
-            <h4 className="text-lg font-black text-smart-navy mb-3 flex items-center gap-2">
+          <div className="bg-gradient-to-br from-blue-50/80 via-white to-indigo-50/30 border border-blue-100/60 rounded-2xl p-6 shadow-sm relative overflow-hidden animate-fade-in">
+            <div className="absolute right-0 top-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none" />
+            <h4 className="text-base font-black text-smart-navy mb-4 flex items-center gap-2">
               <span className="animate-waving-hand text-xl">👋</span> Hallo Sobat SmartInvest!
             </h4>
             <div className="flex flex-col gap-3">
               {paragraphs.slice(1).map((p, i) => (
-                <p key={i} className="text-sm text-slate-600 leading-relaxed font-medium">
+                <p key={i} className="text-sm text-slate-600 leading-relaxed font-semibold">
                   {p.replace(/\*\*/g, "").replace("👋 Hallo Sobat SmartInvest!", "")}
                 </p>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Short Selling Warning Badge */}
+        {hasShortSelling && (
+          <div className="bg-gradient-to-r from-rose-50 to-red-50/60 border border-red-200/80 rounded-2xl p-6 shadow-sm animate-fade-in flex gap-4 items-start">
+            <span className="text-2xl shrink-0">⚠️</span>
+            <div>
+              <p className="text-xs font-black text-rose-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                Alokasi Bobot Negatif (Short Selling) Terdeteksi! 🚨
+              </p>
+              <p className="text-xs text-slate-600 leading-relaxed font-bold">
+                Eits! Portofoliomu kali ini mengizinkan strategi **short selling** (bobot negatif) pada saham pilihan tertentu, nih! 😉 Strategi kece ini memproyeksikan cuan melimpah ketika harga sahamnya sedang turun, tapi ingat ya, risikonya jauh lebih tinggi dan butuh pengawasan super aktif. Sangat disarankan buat sobat investor yang udah berpengalaman dan punya profil risiko tinggi! 📈🔥
+              </p>
             </div>
           </div>
         )}
@@ -172,7 +201,7 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
             </div>
             {(gain || loss) && (
               <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2 text-center">Estimasi Keuntungan & Risiko (Modal Investasi Rp10.000.000)</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2 text-center">Estimasi Keuntungan & Risiko (Modal Investasi {initialAmountStr})</p>
                 <div className="grid grid-cols-2 gap-4 text-center">
                    <div className="border-r border-slate-200">
                      <p className="text-xs font-bold text-gray-500 mb-0.5">Potensi Untung</p>
@@ -188,46 +217,19 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
           </div>
         )}
 
-        {/* ⚡ REVISI 8 (Lanjutan): BULLET LIST ALOKASI REKOMENDASI AI ⚡ */}
-        {stocks.length > 0 && (
-          <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">📊 Alokasi Aset Portofolio Pilihan</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {stocks.map((s, i) => {
-                const match = s.match(/^([A-Za-z]+)\s*\(([-+]?[0-9.,]+%)\)/);
-                if (match) {
-                  return (
-                    <div key={i} className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 shadow-sm hover:scale-[1.02] transition-all">
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                      <span className="text-sm font-extrabold text-smart-navy">{match[1]}</span>
-                      <span className="text-xs font-black text-gray-500 ml-auto">{match[2]}</span>
-                    </div>
-                  );
-                }
-                return (
-                  <div key={i} className="flex items-center gap-2.5 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 shadow-sm">
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    <span className="text-xs font-bold text-slate-700">{s.replace(/\*\*/g, "")}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* Glossary FAQ Grid */}
         {terms.length > 0 && (
-          <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm animate-fade-in">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">📖 GLOSARIUM PINTAR FINANSIAL</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {terms.map((t, i) => (
                 <div key={i} className="bg-slate-50 border border-slate-100 rounded-xl p-4 hover:border-slate-200 transition-colors">
                   <p className="text-xs font-bold text-smart-navy mb-1 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    {t.name}
+                    {t.name.replace(/\*\*/g, "")}
                   </p>
                   <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                    {t.description}
+                    {t.description.replace(/\*\*/g, "")}
                   </p>
                 </div>
               ))}
@@ -235,9 +237,56 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
           </div>
         )}
 
+        {/* Dedicated Perbandingan Metode Card */}
+        {comparisons.length > 0 && (
+          <div className="bg-gradient-to-br from-indigo-50/40 via-white to-blue-50/30 border border-blue-100 rounded-2xl p-6 shadow-sm overflow-hidden relative animate-fade-in">
+            <div className="absolute right-0 top-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+            <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <span className="flex h-2.5 w-2.5 rounded-full bg-indigo-500 animate-pulse" />
+              <span>⚖️ Perbandingan & Evaluasi Metode Optimasi</span>
+            </p>
+            <div className="flex flex-col gap-4">
+              {comparisons.map((comp, i) => {
+                const isBest = comp.toLowerCase().includes("terbaik");
+                const parts = comp.split(":");
+                if (parts.length >= 2) {
+                  const title = parts[0].replace(/-/, "").replace(/\*\*/g, "").trim();
+                  const description = parts.slice(1).join(":").replace(" [Metode Terbaik]", "").replace("(Metode Terbaik)", "").replace(/\*\*/g, "").trim();
+                  return (
+                    <div key={i} className={`border rounded-xl p-4 transition-all hover:scale-[1.005] shadow-sm ${
+                      isBest ? "bg-emerald-50/50 border-emerald-200" : "bg-white border-blue-50/50"
+                    }`}>
+                      <h5 className="text-xs font-black mb-1.5 flex items-center justify-between">
+                        <span className={isBest ? "text-emerald-700" : "text-indigo-700"}>
+                          {title}
+                        </span>
+                        {isBest && (
+                          <span className="bg-emerald-500 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded animate-pulse">
+                            Terbaik Terpilih
+                          </span>
+                        )}
+                      </h5>
+                      <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+                        {description}
+                      </p>
+                    </div>
+                  );
+                }
+                return (
+                  <div key={i} className="bg-white border border-blue-50/50 rounded-xl p-4">
+                    <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+                      {comp.replace(/\*\*/g, "")}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Actionable Tips Card */}
         {tips.length > 0 && (
-          <div className="bg-emerald-50/20 border border-emerald-100/60 rounded-2xl p-6 shadow-sm">
+          <div className="bg-emerald-50/20 border border-emerald-100/60 rounded-2xl p-6 shadow-sm animate-fade-in">
             <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
               <span>💡</span> Tips Penting Rekomendasi
             </p>
@@ -248,7 +297,7 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
                     ✓
                   </div>
                   <p className="text-xs text-slate-700 leading-relaxed font-semibold">
-                    {t}
+                    {t.replace(/\*\*/g, "")}
                   </p>
                 </div>
               ))}
@@ -258,10 +307,10 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
 
         {/* Alert Disclaimer */}
         {disclaimer.length > 0 && (
-          <div className="bg-amber-50/60 border border-amber-200/50 rounded-xl p-4 flex items-start gap-3">
+          <div className="bg-amber-50/60 border border-amber-200/50 rounded-xl p-4 flex items-start gap-3 animate-fade-in">
             <span className="text-sm shrink-0">⚠️</span>
             <p className="text-xs text-amber-800 leading-relaxed font-semibold">
-              {disclaimer.join(" ")}
+              {disclaimer.join(" ").replace(/\*\*/g, "")}
             </p>
           </div>
         )}
@@ -338,7 +387,7 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
       {/* Kontainer 2.5: Estimasi 1 Tahun Dana Investasi */}
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <h2 className="text-base font-bold text-smart-navy mb-4 flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500">
+          <svg xmlns="http://www.w3.org/2000/xl" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500">
             <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
           </svg>
           Estimasi Simulasi Dana 1 Tahun
@@ -355,6 +404,7 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
               </svg>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Potensi Naik</p>
             </div>
+            {/* MURNI MENGIKUTI VALUE DARI JSON PAYLOAD BACKEND SECARA RIYEL */}
             <p className="text-lg font-black text-smart-green">+{fmtRupiah(iData?.investment_simulation?.potential_gain)}</p>
           </div>
           <div className="bg-rose-50/40 border border-rose-100/60 rounded-xl p-4 text-center flex flex-col justify-center">
@@ -364,6 +414,7 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
               </svg>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Potensi Turun</p>
             </div>
+            {/* MURNI MENGIKUTI VALUE DARI JSON PAYLOAD BACKEND SECARA RIYEL */}
             <p className="text-lg font-black text-rose-500">-{fmtRupiah(iData?.investment_simulation?.potential_loss)}</p>
           </div>
         </div>
@@ -372,7 +423,7 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
         </p>
       </div>
 
-      {/* Kontainer 3 (lanjutan): Metrik Sekunder */}
+      {/* Kontainer 3: Metrik Sekunder */}
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 text-center">
@@ -395,19 +446,18 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
         <h2 className="text-base font-bold text-smart-navy mb-4 flex items-center gap-2"><span>📊</span> Pembagian Porsi Dana Investasi</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
           <div className="flex items-center justify-center py-4">
-            {/* ⚡ REVISI 7: DYNAMIC SVG DONUT CHART (MULTI-COLOR & MATCHING LEGEND) ⚡ */}
             {(() => {
               const allocation = iData?.portfolio_allocation || [];
-              const positiveAlloc = allocation.filter(s => s.weight > 0);
-              const totalPositiveWeight = positiveAlloc.reduce((sum, s) => sum + s.weight, 0);
+              const totalAbsWeight = allocation.reduce((sum, s) => sum + Math.abs(s.weight), 0);
 
               const radius = 70;
-              const circ = 2 * Math.PI * radius; // ~439.82
+              const circ = 2 * Math.PI * radius;
               let currentOffset = 0;
 
-              const donutSlices = positiveAlloc.map((stock, idx) => {
-                const color = COLORS[idx % COLORS.length];
-                const percentage = stock.weight / (totalPositiveWeight || 1);
+              const donutSlices = allocation.map((stock, idx) => {
+                const isShort = stock.weight < 0;
+                const color = isShort ? "#ef4444" : COLORS[idx % COLORS.length];
+                const percentage = Math.abs(stock.weight) / (totalAbsWeight || 1);
                 const strokeLength = percentage * circ;
                 const strokeOffset = currentOffset;
                 currentOffset += strokeLength;
@@ -417,23 +467,15 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
                   color,
                   strokeLength,
                   strokeOffset,
-                  weight: stock.weight
+                  weight: stock.weight,
+                  isShort
                 };
               });
 
               return (
                 <div className="relative flex items-center justify-center">
                   <svg width="180" height="180" viewBox="0 0 200 200" className="drop-shadow-sm select-none">
-                    {/* Background track circle */}
-                    <circle
-                      cx="100"
-                      cy="100"
-                      r={radius}
-                      fill="transparent"
-                      stroke="#f8fafc"
-                      strokeWidth="18"
-                    />
-                    {/* Slice segments */}
+                    <circle cx="100" cy="100" r={radius} fill="transparent" stroke="#f8fafc" strokeWidth="18" />
                     {donutSlices.map((slice, i) => (
                       <circle
                         key={i}
@@ -451,38 +493,49 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
                         title={`${slice.ticker}: ${(slice.weight * 100).toFixed(1)}%`}
                       />
                     ))}
-                    {/* Inner empty white area */}
-                    <circle
-                      cx="100"
-                      cy="100"
-                      r={radius - 9}
-                      fill="white"
-                    />
+                    <circle cx="100" cy="100" r={radius - 9} fill="white" />
                   </svg>
-                  {/* Center metrics absolute badges overlay */}
-                  <div className="absolute flex flex-col items-center justify-center">
-                    <span className="text-3xl font-black text-smart-navy tabular-nums leading-none">
+                  <div className="absolute flex flex-col items-center justify-center text-center">
+                    <span className="text-2xl font-black text-smart-navy leading-none">
                       {allocation.length}
                     </span>
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mt-1">
-                      Saham Pilihan
+                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider mt-1.5 leading-none">
+                      {allocation.some(s => s.weight < 0) ? (
+                        <>
+                          <span className="text-emerald-600 font-extrabold">{allocation.filter(s => s.weight > 0).length}L</span>
+                          {" / "}
+                          <span className="text-rose-500 font-extrabold">{allocation.filter(s => s.weight < 0).length}S</span>
+                        </>
+                      ) : "Saham Pilihan"}
                     </span>
                   </div>
                 </div>
               );
             })()}
           </div>
+          
           <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
-            {iData?.portfolio_allocation?.map((stock, i) => (
-              <div key={i} className="flex items-center justify-between py-2.5 px-4 bg-gray-50/70 border border-gray-50 rounded-xl hover:bg-gray-50 transition-colors">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-2.5 h-2.5 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                  <span className="text-sm font-bold text-smart-navy shrink-0">{stock.ticker?.replace(".JK", "")}</span>
-                  <span className="text-xs text-gray-400 truncate font-normal">{stock.fullname}</span>
+            {iData?.portfolio_allocation?.map((stock, i) => {
+              const isShort = stock.weight < 0;
+              const color = isShort ? "#ef4444" : COLORS[i % COLORS.length];
+              return (
+                <div key={i} className={`flex items-center justify-between py-2.5 px-4 border rounded-xl hover:bg-slate-50/50 transition-all ${
+                  isShort ? "bg-rose-50/20 border-rose-100/70 hover:border-rose-200" : "bg-gray-50/70 border-gray-50/70 hover:border-gray-100"
+                }`}>
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isShort ? "animate-pulse" : ""}`} style={{ backgroundColor: color }} />
+                    <span className="text-sm font-bold text-smart-navy shrink-0">{stock.ticker?.replace(".JK", "")}</span>
+                    <span className="text-xs text-gray-400 truncate font-normal">{stock.fullname}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isShort && (
+                      <span className="bg-red-500 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded shadow-sm">SHORT</span>
+                    )}
+                    <span className={`text-sm font-bold ml-2 ${isShort ? "text-red-500" : "text-gray-700"}`}>{fmtPersen(stock.weight)}</span>
+                  </div>
                 </div>
-                <span className="text-sm font-bold text-gray-700 ml-4">{fmtPersen(stock.weight)}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
         <p className="text-xs font-semibold text-gray-400 mt-5 text-center bg-gray-50 py-2 rounded-xl border border-gray-100">
@@ -521,16 +574,12 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
                   <td className="p-4 text-center">
                     <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-black tracking-wide ${
                       m.is_best ? 'bg-smart-green/10 text-smart-green border border-smart-green/20' : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {fmtScore(m.final_score)}
-                    </span>
+                    }`}>{fmtScore(m.final_score)}</span>
                   </td>
                   <td className="p-4 text-center">
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide flex items-center gap-1 ${
                       m.is_best ? "bg-smart-green text-white shadow-sm" : "bg-gray-100 text-gray-400"
-                    }`}>
-                      {m.is_best ? "⭐ TERBAIK" : "PEMBANDING"}
-                    </span>
+                    }`}>{m.is_best ? "⭐ TERBAIK" : "PEMBANDING"}</span>
                   </td>
                 </tr>
               ))}
@@ -542,12 +591,10 @@ export default function RecommendationPage({ analysisCompleted, result, metaForm
         </p>
       </div>
 
-      {/* Kontainer 5: Interpretasi AI (Premium Card Layout) */}
+      {/* Kontainer 5: Interpretasi AI */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="bg-gradient-to-r from-smart-navy via-[#1a2740] to-smart-navy px-6 py-4 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-smart-green/20 flex items-center justify-center">
-            <span className="text-base">🤖</span>
-          </div>
+          <div className="w-9 h-9 rounded-xl bg-smart-green/20 flex items-center justify-center"><span className="text-base">🤖</span></div>
           <div>
             <h2 className="text-base font-bold text-white">Interpretasi Rekomendasi Pintar AI</h2>
             <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Rekomendasi Naratif oleh SmartInvest AI • {iData?.decision_engine?.best_method || 'N/A'}</p>
