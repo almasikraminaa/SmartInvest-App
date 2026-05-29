@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { registerUser } from '../services/authService';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../services/supabaseClient';
 import bgVideo from '../assets/videos/bg.mp4';
 
 export default function RegisterPage() {

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../services/supabaseClient";
 import toast from "react-hot-toast";
 import AnalysisPage from "./AnalysisPage";
 

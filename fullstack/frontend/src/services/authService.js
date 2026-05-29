@@ -1,5 +1,5 @@
 import { supabase }
-from "../lib/supabase";
+from "./supabaseClient";
 
 export const registerUser =
 async (
