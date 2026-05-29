@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { analyzePortfolio } from "../../../services/portfolioService";
 import { predictIHSG } from "../../../services/ihsgService";
-import { supabase } from "../../../lib/supabase";
+import { supabase } from "../../../services/supabaseClient";
 import { saveInvestmentHistory } from "../../../services/investmentService";
 
 const METHODS = [

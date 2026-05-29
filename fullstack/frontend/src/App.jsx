@@ -1,7 +1,7 @@
 // src/App.jsx
 import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { supabase } from "./lib/supabase.js";
+import { supabase } from "./services/supabaseClient";
 import Sidebar from "./components/layout/Sidebar";
 import AnalysisModal from "./components/features/analysis/AnalysisModal";
 import LandingPage from "./pages/LandingPage";
@@ -27,7 +27,7 @@ function App() {
   // ══════════════════════════════════════════════════════════════════════════
   const [analysisCompleted, setAnalysisCompleted] = useState(() => {
     return localStorage.getItem("smartinvest_analysis_completed") === "true";
-  }); 
+  });
 
   const [analysisResult, setAnalysisResult] = useState(() => {
     const savedResult = localStorage.getItem("smartinvest_analysis_result");
@@ -44,9 +44,12 @@ function App() {
   // ══════════════════════════════════════════════════════════════════════════
   useEffect(() => {
     localStorage.setItem("smartinvest_analysis_completed", analysisCompleted);
-    
+
     if (analysisResult) {
-      localStorage.setItem("smartinvest_analysis_result", JSON.stringify(analysisResult));
+      localStorage.setItem(
+        "smartinvest_analysis_result",
+        JSON.stringify(analysisResult),
+      );
     } else {
       localStorage.removeItem("smartinvest_analysis_result");
     }
@@ -77,7 +80,7 @@ function App() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
-    
+
     // Bersihkan seluruh berkas pencatatan lokal saat user keluar akun
     setAnalysisCompleted(false);
     setAnalysisResult(null);
@@ -89,7 +92,8 @@ function App() {
 
   const formattedUser = user
     ? {
-        name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+        name:
+          user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
         avatar: user.user_metadata?.avatar_url || null,
         email: user.email || "user@email.com",
       }
@@ -105,16 +109,31 @@ function App() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
-        <svg className="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        <svg
+          className="animate-spin h-8 w-8 text-white"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          />
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          />
         </svg>
       </div>
     );
   }
 
   const isLoggedIn = !!user;
-
 
   if (!isLoggedIn) {
     return (
@@ -143,18 +162,28 @@ function App() {
           onLoginClick={() => {}}
           onLogout={handleLogout}
         />
-        
-        <main className={`flex-1 flex flex-col py-10 px-6 overflow-hidden transition-all duration-300 ${sidebarOpen ? "ml-64" : "ml-16"}`}>
+
+        <main
+          className={`flex-1 flex flex-col py-10 px-6 overflow-hidden transition-all duration-300 ${sidebarOpen ? "ml-64" : "ml-16"}`}
+        >
           <div className="flex-1 w-full overflow-hidden">
             <Routes>
-              <Route path="/" element={<HomePage setIsAnalysisModalOpen={setIsAnalysisModalOpen} />} />
+              <Route
+                path="/"
+                element={
+                  <HomePage setIsAnalysisModalOpen={setIsAnalysisModalOpen} />
+                }
+              />
               <Route path="/login" element={<Navigate to="/" replace />} />
               <Route path="/register" element={<Navigate to="/" replace />} />
-              <Route path="/forgot-password" element={<Navigate to="/" replace />} />
-              
+              <Route
+                path="/forgot-password"
+                element={<Navigate to="/" replace />}
+              />
+
               <Route
                 path="/method"
-                element = {
+                element={
                   <MethodPage
                     setIsAnalysisModalOpen={setIsAnalysisModalOpen}
                     setPreSelectedMethod={setPreSelectedMethod}
@@ -163,11 +192,11 @@ function App() {
               />
               <Route
                 path="/analysis"
-                element = {
+                element={
                   <AnalysisPage
                     analysisCompleted={analysisCompleted}
                     setIsAnalysisModalOpen={setIsAnalysisModalOpen}
-                    result={analysisResult} 
+                    result={analysisResult}
                     metaForm={metaForm}
                   />
                 }
@@ -175,7 +204,7 @@ function App() {
               <Route path="/history" element={<HistoryPage />} />
               <Route
                 path="/recommendation"
-                element = {
+                element={
                   <RecommendationPage
                     analysisCompleted={analysisCompleted}
                     setIsAnalysisModalOpen={setIsAnalysisModalOpen}
