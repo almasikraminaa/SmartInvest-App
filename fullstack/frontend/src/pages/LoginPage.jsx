@@ -60,25 +60,18 @@ export default function LoginPage() {
   // ======================
   const handleGoogleLogin = async () => {
     try {
-      setIsGoogleLoading(true);
-
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
 
         options: {
-          redirectTo: import.meta.env.DEV
-            ? "http://localhost:5173"
-            : "https://smartinvest-app-git-main-helmiazkias-projects.vercel.app",
+          redirectTo: window.location.origin,
         },
       });
 
       if (error) throw error;
     } catch (error) {
       console.error(error);
-
-      toast.error("Gagal login dengan Google");
-
-      setIsGoogleLoading(false);
+      toast.error("Gagal login Google");
     }
   };
 
