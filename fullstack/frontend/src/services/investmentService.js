@@ -1,7 +1,20 @@
 import { supabase } from './supabaseClient';
 
-// 1. Fungsi untuk menyimpan riwayat baru setelah user melakukan analisis
-export const saveInvestmentHistory = async (targetIndex, method, capital, expectedReturn, risk) => {
+// 1. Fungsi untuk menyimpan riwayat baru setelah user melakukan analisis (⚡ UPDATED ⚡)
+export const saveInvestmentHistory = async (
+  targetIndex, 
+  method, 
+  capital, 
+  expectedReturn, 
+  risk,
+  sharpeRatio,       // ⚡ Parameter Baru 1
+  marketSentiment,   // ⚡ Parameter Baru 2
+  biRate,            // ⚡ Parameter Baru 3
+  startDate,         // ⚡ Parameter Baru 4
+  endDate,           // ⚡ Parameter Baru 5
+  aiInterpretation,  // ⚡ Parameter Baru 6
+  portfolioAllocation // ⚡ Parameter Baru 7
+) => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -15,7 +28,16 @@ export const saveInvestmentHistory = async (targetIndex, method, capital, expect
         method: method,
         capital: capital,
         expected_return: expectedReturn,
-        risk: risk
+        risk: risk,
+        
+        // ⚡ MAP DATA BARU KE KOLOM SUPABASE ⚡
+        sharpe_ratio: sharpeRatio,
+        market_sentiment: marketSentiment,
+        bi_rate: biRate,
+        start_date: startDate,
+        end_date: endDate,
+        ai_interpretation: aiInterpretation,
+        portfolio_allocation: portfolioAllocation
       }])
       .select();
 
