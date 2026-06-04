@@ -131,8 +131,8 @@ export default function AnalysisPage({
                 Alokasi Bobot Negatif (Short Selling) Terdeteksi! 🚨
               </p>
               <p className="text-xs text-slate-600 leading-relaxed font-bold">
-                Eits! Portofoliomu kali ini mengizinkan strategi **short
-                selling** (bobot negatif) pada saham pilihan tertentu, nih! 😉
+                Eits! Portofoliomu kali ini mengizinkan strategi **Short
+                Selling** (bobot negatif) pada saham pilihan tertentu, nih! 😉
                 Strategi kece ini memproyeksikan cuan melimpah ketika harga
                 sahamnya sedang turun, tapi ingat ya, risikonya jauh lebih
                 tinggi dan butuh pengawasan super aktif. Sangat disarankan buat
@@ -149,7 +149,7 @@ export default function AnalysisPage({
             <div className="absolute right-0 top-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
             <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-4 flex items-center gap-2">
               <span className="flex h-2.5 w-2.5 rounded-full bg-indigo-500 animate-pulse" />
-              <span>🛡️ Analisis Finansial Pentar</span>
+              <span>🛡️ Analisis Finansial Pintar</span>
             </p>
             <div className="flex flex-col gap-4">
               {analysisBullets.map((bullet, i) => {

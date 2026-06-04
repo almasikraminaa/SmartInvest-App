@@ -2,7 +2,7 @@ name: Sync to Hugging Face Spaces
 
 on:
   push:
-    branches: [ main ] # Ganti 'main' jika nama branch utama GitHub kamu berbeda
+    branches: [ main ]
 
 jobs:
   deploy:
@@ -26,12 +26,12 @@ jobs:
         
         # 3. Sinkronisasi codingan utama dari folder SmartfastApi ke hf_space
         # Kita kecualikan folder 'models' dan 'assets' dari proses rsync utama ini
-        rsync -av --exclude='models/' --exclude='assets/' SmartfastApi/ hf_space/
+        rsync -av --exclude='models/' --exclude='assets/' fullstack/backend/SmartfastApi/ hf_space/
         
         # 4. Amankan folder assets secara utuh sebagai FOLDER, bukan cuma isinya
-        if [ -d "SmartfastApi/assets" ]; then
+        if [ -d "fullstack/backend/SmartfastApi/assets" ]; then
           mkdir -p hf_space/assets
-          rsync -av SmartfastApi/assets/ hf_space/assets/
+          rsync -av fullstack/backend/SmartfastApi/assets/ hf_space/assets/
         fi
         
         # 5. Masuk ke folder Hugging Face, commit, dan push
