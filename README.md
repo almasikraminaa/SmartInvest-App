@@ -25,6 +25,7 @@ Dengan mengombinasikan **Analisis Kuantitatif Keuangan** (Modern Portfolio Theor
 - [📥 Tautan Unduhan Model ML](#-tautan-unduhan-model-ml-machine-learning-models)
 - [📊 Sumber Dataset (Dataset Source)](#-sumber-dataset-dataset-source)
 - [🛠️ Langkah-Langkah Replikasi & Setup Sistem](#%EF%B8%8F-langkah-langkah-replikasi--setup-sistem)
+
 - [💡 Justifikasi Teknis (Mengapa Memilih Implementasi Tersebut?)](#-justifikasi-teknis-mengapa-memilih-implementasi-tersebut)
 - [📖 Glosarium / Kamus Data (Data Dictionary)](#-glosarium--kamus-data-data-dictionary)
 
@@ -140,7 +141,7 @@ Tim AI Engineer bertanggung jawab dalam melatih model Deep Learning untuk klasif
 Tim Fullstack Developer bertanggung jawab atas arsitektur sistem produksi, manajemen basis data, autentikasi pengguna, orkestrasi API, serta pengembangan antarmuka web (UI/UX) premium yang responsif.
 * **Tugas Utama**:
   - **Frontend**: Membangun antarmuka web interaktif menggunakan React.js dan TailwindCSS dengan desain modern (dark mode, glassmorphism, dan transisi halus). Mengembangkan fitur charting visualisasi bobot portofolio serta panel konfigurasi parameter investasi.
-  - **Backend (Node.js Gateway)**: Menyediakan REST API menggunakan Express.js terhubung dengan basis data Supabase untuk menangani operasi CRUD riwayat portofolio pengguna (`analysis_history`).
+  - **Backend (Node.js Gateway)**: Menyediakan REST API menggunakan Express.js terhubung dengan basis data Supabase untuk menangani operasi CRUD riwayat portofolio pengguna (`investment_histories`).
   - **Backend (FastAPI Engine - SmartfastApi)**: Mengembangkan API utama Python yang mengoordinasikan input pengguna dari web React, melakukan scraping suku bunga BI Rate terbaru dari situs resmi Bank Indonesia, memuat berkas model AI lokal (`.keras`), menghitung bobot portofolio (MVEP, SIM, CAPM) berdasarkan parameter dinamis, mengintegrasikan Google Gemini API untuk ulasan naratif AI, serta menyimpan hasil akhir kalkulasi ke tabel `investment_histories` Supabase secara otomatis.
 * **Berkas Kunci**:
   - `fullstack/frontend/src/`: Aplikasi React (Vite) yang berisi halaman utama (`AnalysisPage`, `RecommendationPage`, `HistoryPage`, `MethodPage`, `LandingPage`, dll.).
@@ -202,29 +203,66 @@ Ikuti panduan berikut untuk mereplikasi dan menjalankan seluruh ekosistem SmartI
 
 ---
 
+
 ### 1. Setup Database & Auth (Supabase)
+> **Catatan:**  
+> Pada pengembangan SmartInvest, project Supabase menggunakan nama **`smartinvest-db`**. Namun pengguna bebas memakai nama project/database apa pun selama URL dan API key pada file `.env` telah disesuaikan.
 1. Buat proyek baru di [Supabase Console](https://database.new).
 2. Di bagian **SQL Editor**, jalankan perintah berikut untuk membuat tabel riwayat investasi:
    ```sql
-   CREATE TABLE investment_histories (
-       id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-       user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-       target_index VARCHAR(20) NOT NULL,
-       method VARCHAR(20) NOT NULL,
-       capital BIGINT NOT NULL,
-       expected_return NUMERIC(10, 6),
-       risk NUMERIC(10, 6),
-       sharpe_ratio NUMERIC(10, 4),
-       market_sentiment VARCHAR(20),
-       bi_rate NUMERIC(5, 2),
-       start_date DATE NOT NULL,
-       end_date DATE NOT NULL,
-       ai_interpretation TEXT,
-       portfolio_allocation JSONB,
-       analysis_form JSONB,
-       analysis_result JSONB,
-       created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-   );
+-- ==========================
+-- PROFILES TABLE
+-- ==========================
+CREATE TABLE profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    full_name TEXT,
+    avatar_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ==========================
+-- INVESTMENT HISTORIES TABLE
+-- ==========================
+CREATE TABLE investment_histories (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    target_index TEXT NOT NULL,
+    method TEXT NOT NULL,
+    capital NUMERIC NOT NULL,
+    expected_return NUMERIC,
+    risk NUMERIC,
+    bi_rate NUMERIC,
+    sharpe_ratio NUMERIC,
+    market_sentiment TEXT,
+    portfolio_allocation JSONB,
+    ai_interpretation TEXT,
+    start_date DATE,
+    end_date DATE,
+    analysis_form JSONB,
+    analysis_result JSONB,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ==========================
+-- BI RATE TABLE
+-- ==========================
+CREATE TABLE bi_rates (
+    tanggal DATE PRIMARY KEY,
+    rate NUMERIC,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ==========================
+-- SYSTEM LOGS TABLE
+-- ==========================
+CREATE TABLE system_logs (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at TIMESTAMP DEFAULT now()
+);
+```
+
    ```
 3. Aktifkan fitur **Email Auth** atau penyedia autentikasi lain di tab **Authentication** $\rightarrow$ **Providers**.
 
@@ -283,13 +321,38 @@ FastAPI bertindak sebagai mesin kalkulator model AI dan perantara Gemini.
    - Pastikan file `ihsg_best_model_3class.keras` berada di folder `fullstack/backend/SmartfastApi/models/`
    - Pastikan file `ihsg_scaler_global.pkl` berada di folder `fullstack/backend/SmartfastApi/assets/`
    - Pastikan file `market_price_ihsg.csv` berada di folder `fullstack/backend/SmartfastApi/data/`
-2. Konfigurasikan env di direktori `fullstack/backend/SmartfastApi/`:
-   Buat file bernama `.env` dan tambahkan variabel berikut:
-   ```env
-   SUPABASE_URL=https://your-project-id.supabase.co
-   SUPABASE_KEY=your-supabase-service-role-key-or-anon-key
-   GEMINI_API_KEY=your-google-gemini-api-key
-   ```
+2. Backend Environment (FastAPI - SmartfastApi)
+
+Lokasi file template:
+
+```txt
+fullstack/backend/SmartfastApi/.env.example
+```
+
+Salin file menjadi `.env`:
+
+```bash
+cp fullstack/backend/SmartfastApi/.env.example fullstack/backend/SmartfastApi/.env
+```
+
+Isi variabel environment berikut:
+
+```env
+GEMINI_API_KEY_IHSG=your_gemini_api_key
+GEMINI_API_KEY_ANALYSIS=your_gemini_api_key
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
+```
+
+**Keterangan:**
+
+* `GEMINI_API_KEY_IHSG` → API key Gemini untuk prediksi dan interpretasi tren IHSG.
+* `GEMINI_API_KEY_ANALYSIS` → API key Gemini untuk analisis portofolio.
+* `SUPABASE_URL` → URL project Supabase.
+* `SUPABASE_KEY` → Credential akses database Supabase.
+
+> **Catatan Penting:**
+> File `.env` asli sengaja tidak diunggah demi keamanan credential dan API key. Gunakan `.env.example` sebagai template konfigurasi lokal.
 3. Jalankan aplikasi:
    ```bash
    cd fullstack/backend/SmartfastApi
@@ -300,33 +363,43 @@ FastAPI bertindak sebagai mesin kalkulator model AI dan perantara Gemini.
    ```
    *Layanan FastAPI Engine utama ini berjalan di port 8000.*
 
-#### B. Node.js Express Gateway
-Express bertindak sebagai pelayan operasi CRUD riwayat database Supabase.
-1. Konfigurasikan env di direktori `fullstack/backend/`:
-   Buat file bernama `.env` dan tambahkan variabel berikut:
-   ```env
-   SUPABASE_URL=https://your-project-id.supabase.co
-   SUPABASE_ANON_KEY=your-supabase-anon-key
-   PORT=5000
-   ```
-2. Jalankan aplikasi:
-   ```bash
-   cd fullstack/backend
-   npm install
-   npm start
-   ```
-   *Gateway Node.js ini berjalan di port 5000.*
+
+
+### 5. Setup dan Menjalankan Fullstack Frontend (React)
+1. Frontend Environment (React + Vite)
+
+Lokasi file template:
+
+```txt
+fullstack/frontend/.env.example
+```
+
+Salin file menjadi `.env`:
+
+```bash
+cp fullstack/frontend/.env.example fullstack/frontend/.env
+```
+
+Isi variabel environment berikut:
+
+```env
+VITE_TWELVEDATA_KEY=your_twelvedata_api_key
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_AI_BASE_URL=http://localhost:8000
+GOAPI_API_KEY=your_goapi_api_key
+```
+
+**Keterangan:**
+
+* `VITE_TWELVEDATA_KEY` → API key data pasar saham real-time.
+* `VITE_SUPABASE_URL` → URL project Supabase.
+* `VITE_SUPABASE_ANON_KEY` → Public anon key Supabase.
+* `VITE_AI_BASE_URL` → Endpoint FastAPI Engine.
+* `GOAPI_API_KEY` → API tambahan untuk layanan eksternal.
 
 ---
 
-### 5. Setup dan Menjalankan Fullstack Frontend (React)
-1. Konfigurasikan env di direktori `fullstack/frontend/`:
-   Buat file bernama `.env` dan tambahkan variabel berikut:
-   ```env
-   VITE_SUPABASE_URL=https://your-project-id.supabase.co
-   VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
-   VITE_API_BASE_URL=http://localhost:5000
-   VITE_AI_BASE_URL=http://localhost:8000
    ```
 2. Jalankan aplikasi web:
    ```bash
@@ -339,6 +412,8 @@ Express bertindak sebagai pelayan operasi CRUD riwayat database Supabase.
 </details>
 
 ---
+
+
 
 ## 💡 Justifikasi Teknis (Mengapa Memilih Implementasi Tersebut?)
 
