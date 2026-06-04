@@ -1,7 +1,22 @@
+# Environment
+.env
+.env.example
+
+# Python cache
 __pycache__/
 *.pyc
-.env
 
+# Virtual environment
+venv/
+.venv/
+
+# Model files
 *.keras
 *.h5
 *.pkl
+
+# IDE
+.vscode/
+
+# Logs
+*.log
