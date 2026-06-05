@@ -145,7 +145,7 @@ pip install -r requirements.txt
 
 ---
 
-# ▶️ Run Streamlit Dashboard
+# ▶️ Run Streamlit Dashboard Locally
 
 ```bash
 cd dashboard
@@ -153,3 +153,10 @@ streamlit run dashboard.py
 ```
 
 ---
+
+# 🌐 Deployment
+
+Dashboard ini di-deploy menggunakan Streamlit Cloud yang terintegrasi langsung dengan repository GitHub sehingga setiap perubahan pada branch utama dapat diperbarui secara otomatis.
+
+🔗 Live Dashboard:
+https://smartinvest-dashboard.streamlit.app/
