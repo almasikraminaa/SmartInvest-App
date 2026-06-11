@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import ProfileMenu from '../features/profile/ProfileMenu';
 import NotificationMenu from '../features/notifications/NotificationMenu';
+import { BrainCircuit } from 'lucide-react';
 
 // Ikon untuk setiap menu
 const MenuIcon = ({ name, className = '' }) => {
@@ -13,12 +14,8 @@ const MenuIcon = ({ name, className = '' }) => {
         <rect x="13" y="13" width="8" height="8" rx="1"/>
       </>
     ),
-    method: (
-      <>
-        <circle cx="12" cy="12" r="10"/>
-        <circle cx="12" cy="12" r="6"/>
-        <circle cx="12" cy="12" r="2"/>
-      </>
+    edukasi: (
+      <BrainCircuit className={className} strokeWidth={2} />
     ),
     analysis: (
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
@@ -46,7 +43,7 @@ export default function Sidebar({ isOpen, onToggle, isLoggedIn = false, user = n
   const navigate = useNavigate();
   const menus = [
     { to: '/',              label: 'Home',           icon: 'home' },
-    { to: '/method',        label: 'Method',         icon: 'method' },
+    { to: '/method',        label: 'Edukasi',        icon: 'edukasi' },
     { to: '/analysis',      label: 'Analysis',       icon: 'analysis' },
     { to: '/recommendation',label: 'Recommendation', icon: 'recommendation' },
     { to: '/history',       label: 'History',        icon: 'history' },

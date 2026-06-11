@@ -26,7 +26,6 @@ function safeNum(v) {
   const n = Number(v);
   return isFinite(n) && n !== 0 ? n : null;
 }
-;
 function safePos(v) {
   const n = Number(v);
   return isFinite(n) && n > 0 ? n : null;
@@ -246,6 +245,27 @@ function LineChart({ series, loading, isPositive, range }) {
       </div>
     );
 
+  if (series.length === 0 && !loading && range === "1d") {
+    return (
+      <div
+        className="flex flex-col items-center justify-center bg-slate-50/80 backdrop-blur-sm rounded-xl border border-dashed border-slate-200 p-6 text-center"
+        style={{ height: H }}
+      >
+        <div className="bg-amber-50 text-amber-500 p-3 rounded-full mb-3 animate-bounce">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <p className="text-sm font-extrabold text-slate-800 mb-1">
+          Bursa Sedang Tutup / Libur
+        </p>
+        <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
+          Bursa Efek Indonesia (BEI) tidak aktif hari ini. Data intraday 1D akan tersedia kembali pada hari kerja berikutnya (Senin - Jumat, 09:00 - 16:00 WIB).
+        </p>
+      </div>
+    );
+  }
+
   return (
     <svg
       ref={svgRef}
@@ -444,44 +464,37 @@ function LineChart({ series, loading, isPositive, range }) {
 }
 
 /* ── OHLC Data Grid ─────────────────────────────────────────────────── */
+
 function OHLCGrid({ quote, loading }) {
   const up = (quote?.pct ?? 0) >= 0;
 
+  // Diatur ulang menjadi 2 Baris x 3 Kolom agar padat berisi
   const rows = [
     [
       { label: "Open", value: fmt(quote?.open, 2), color: "text-gray-800" },
+      { label: "High", value: fmt(quote?.high, 2), color: "text-emerald-600" },
+      { label: "Low", value: fmt(quote?.low, 2), color: "text-red-500" },
+    ],
+    [
       {
         label: "Prev Close",
         value: fmt(quote?.prev, 2),
         color: "text-amber-600",
       },
       {
-        label: "Change",
-        value:
-          quote?.pct != null
-            ? `${quote.pct >= 0 ? "+" : ""}${fmt(Math.abs(quote.pct), 2)}%`
-            : "—",
-        color: up ? "text-emerald-600" : "text-red-500",
-      },
-    ],
-    [
-      { label: "High", value: fmt(quote?.high, 2), color: "text-emerald-600" },
-      { label: "Low", value: fmt(quote?.low, 2), color: "text-red-500" },
-      {
-        label: "Market Cap",
-        value: quote?.marketCap != null ? fmtK(quote.marketCap) : "—",
-        color: "text-gray-800",
-      },
-    ],
-    [
-      {
         label: "Volume",
         value:
           quote?.volume != null && quote.volume > 0 ? fmtK(quote.volume) : "—",
         color: "text-gray-800",
       },
-      { label: "Value", value: "—", color: "text-gray-800" },
-      { label: "Frekuensi", value: "—", color: "text-gray-800" },
+      {
+        label: "Change",
+        value:
+          quote?.change != null
+            ? `${quote.change >= 0 ? "+" : ""}${fmt(quote.change, 2)}`
+            : "—",
+        color: up ? "text-emerald-600" : "text-red-500",
+      },
     ],
   ];
 
@@ -525,11 +538,14 @@ function OHLCGrid({ quote, loading }) {
           </div>
         ))}
       </div>
-      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">Tabel data yang merangkum pergerakan harga pasar: harga pembukaan (Open), nilai tertinggi (High), terendah (Low), penutupan sebelumnya (Prev Close), serta persentase perubahan (Change).</p>
+      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">
+        Tabel data yang merangkum pergerakan harga pasar: harga pembukaan
+        (Open), nilai tertinggi (High), terendah (Low), penutupan sebelumnya
+        (Prev Close), serta nilai perubahan absolute harian (Change).
+      </p>
     </div>
   );
 }
-
 /* ── Index Performance horizontal bars ──────────────────────────────── */
 function IndexPerformance({ perfs, loading }) {
   const vals = perfs ? Object.values(perfs).map((v) => Math.abs(v ?? 0)) : [];
@@ -586,7 +602,11 @@ function IndexPerformance({ perfs, loading }) {
           );
         })}
       </div>
-      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">Grafik batang horizontal yang menunjukkan persentase naik-turunnya performa indeks dalam berbagai periode waktu (1D, 1W, 1M, 3M, YTD, 1Y, 5Y). Bar merah = negatif, bar hijau = positif.</p>
+      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">
+        Grafik batang horizontal yang menunjukkan persentase naik-turunnya
+        performa indeks dalam berbagai periode waktu (1D, 1W, 1M, 3M, YTD, 1Y,
+        5Y). Bar merah = negatif, bar hijau = positif.
+      </p>
     </div>
   );
 }
@@ -656,7 +676,11 @@ function LowHighRange({ ranges, currentPrice, loading }) {
           );
         })}
       </div>
-      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">Indikator visual posisi nilai saat ini di antara batas terendah (Low) dan tertinggi (High) pada berbagai rentang waktu. Panah kecil menandai posisi harga saat ini.</p>
+      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">
+        Indikator visual posisi nilai saat ini di antara batas terendah (Low)
+        dan tertinggi (High) pada berbagai rentang waktu. Panah kecil menandai
+        posisi harga saat ini.
+      </p>
     </div>
   );
 }
@@ -765,7 +789,10 @@ function IndexDiary({ diary, loading }) {
           </tbody>
         </table>
       </div>
-      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">Kalender riwayat performa pasar berdasarkan bulan dan hari perdagangan. Warna hijau = kenaikan, merah = penurunan (heatmap visual).</p>
+      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">
+        Kalender riwayat performa pasar berdasarkan bulan dan hari perdagangan.
+        Warna hijau = kenaikan, merah = penurunan (heatmap visual).
+      </p>
     </div>
   );
 }
@@ -775,6 +802,7 @@ export default function MarketChart() {
   const [tf, setTf] = useState(CHART_TFS[0]);
   const [series, setSeries] = useState([]);
   const [quote, setQuote] = useState(null);
+  const [dailyQuote, setDailyQuote] = useState(null);
   const [perfs, setPerfs] = useState(null);
   const [ranges, setRanges] = useState(null);
   const [diary, setDiary] = useState(null);
@@ -791,7 +819,9 @@ export default function MarketChart() {
       );
       if (!res.ok) {
         const message = await res.text();
-        throw new Error(`Yahoo proxy fetch failed: ${res.status} ${res.statusText} - ${message}`);
+        throw new Error(
+          `Yahoo proxy fetch failed: ${res.status} ${res.statusText} - ${message}`,
+        );
       }
       const data = await res.json();
 
@@ -947,9 +977,60 @@ export default function MarketChart() {
     }
   }, []);
 
+  const fetchDailyQuote = useCallback(async () => {
+    try {
+      const res = await fetch(
+        "/api/yahoo/v8/finance/chart/%5EJKSE?interval=5m&range=1d",
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      const result = data?.chart?.result?.[0];
+      const meta = result?.meta;
+      const q = result?.indicators?.quote?.[0] ?? {};
+
+      const validCloses = (q.close ?? []).filter(
+        (v) => v != null && isFinite(Number(v)),
+      );
+      const last =
+        safeNum(meta?.regularMarketPrice) ?? safeNum(validCloses.at(-1));
+      const prev = safeNum(meta?.previousClose) ?? safeNum(validCloses.at(-2));
+      const open =
+        safeNum(meta?.regularMarketOpen) ??
+        safeNum((q.open ?? []).filter(Boolean)[0]);
+      const high =
+        safeNum(meta?.regularMarketDayHigh) ??
+        ((q.high ?? []).filter(Boolean).length ? Math.max(...(q.high ?? []).filter(Boolean)) : null);
+      const low =
+        safeNum(meta?.regularMarketDayLow) ??
+        ((q.low ?? []).filter(Boolean).length ? Math.min(...(q.low ?? []).filter(Boolean)) : null);
+      const vol =
+        safePos(meta?.regularMarketVolume) ??
+        (q.volume ?? []).filter(Boolean).reduce((a, b) => a + b, 0);
+      const mcap = safeNum(meta?.marketCap);
+      const pct = last && prev ? ((last - prev) / prev) * 100 : null;
+
+      setDailyQuote({
+        close: last,
+        prev,
+        open,
+        high,
+        low,
+        volume: vol,
+        marketCap: mcap,
+        pct,
+        change: last && prev ? last - prev : null,
+      });
+    } catch (err) {
+      console.error("Gagal mengambil daily quote:", err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchChart();
   }, [fetchChart]);
+  useEffect(() => {
+    fetchDailyQuote();
+  }, [fetchDailyQuote]);
   useEffect(() => {
     fetchPerfs();
   }, [fetchPerfs]);
@@ -957,7 +1038,25 @@ export default function MarketChart() {
     fetchDiary();
   }, [fetchDiary]);
 
-  const isPositive = (quote?.change ?? 0) >= 0;
+  const displayQuote = (() => {
+    const base = dailyQuote || quote;
+    if (tf.label !== "1D" && series.length > 1) {
+      const latest = series.at(-1)?.close;
+      const first = series[0]?.close;
+      if (latest != null && first != null && first !== 0) {
+        const change = latest - first;
+        const pct = (change / first) * 100;
+        return {
+          ...base,
+          close: latest,
+          change,
+          pct,
+        };
+      }
+    }
+    return base;
+  })();
+  const isPositive = (displayQuote?.change ?? 0) >= 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -975,22 +1074,22 @@ export default function MarketChart() {
           </p>
         </div>
         <div className="text-right flex-shrink-0">
-          {chartLoading ? (
+          {chartLoading && !displayQuote ? (
             <div className="w-24 h-6 bg-gray-100 rounded animate-pulse" />
           ) : (
             <>
               <p className="text-2xl font-extrabold text-gray-900 tabular-nums tracking-tight">
-                {fmt(quote?.close, 2)}
+                {fmt(displayQuote?.close, 2)}
               </p>
               <p
                 className={`text-sm font-semibold flex items-center justify-end gap-1 ${isPositive ? "text-emerald-600" : "text-red-500"}`}
               >
                 <TrendIcon up={isPositive} />
                 {isPositive ? "+" : ""}
-                {fmt(quote?.change, 2)}{" "}
+                {fmt(displayQuote?.change, 2)}{" "}
                 <span className="opacity-60 text-xs">
                   ({isPositive ? "+" : ""}
-                  {fmt(quote?.pct, 2)}%)
+                  {fmt(displayQuote?.pct, 2)}%)
                 </span>
               </p>
             </>
@@ -1020,13 +1119,17 @@ export default function MarketChart() {
         />
       </div>
 
-      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">IHSG (Indeks Harga Saham Gabungan) adalah indeks utama Bursa Efek Indonesia yang mencerminkan pergerakan harga seluruh saham tercatat. Data di atas diperbarui secara real-time dari Yahoo Finance.</p>
+      <p className="px-4 py-2 text-[10px] text-gray-400 leading-relaxed border-t border-gray-50">
+        IHSG (Indeks Harga Saham Gabungan) adalah indeks utama Bursa Efek
+        Indonesia yang mencerminkan pergerakan harga seluruh saham tercatat.
+        Data di atas diperbarui secara real-time dari Yahoo Finance.
+      </p>
 
-      <OHLCGrid quote={quote} loading={chartLoading} />
+      <OHLCGrid quote={displayQuote} loading={chartLoading || !displayQuote} />
       <IndexPerformance perfs={perfs} loading={perfLoading} />
       <LowHighRange
         ranges={ranges}
-        currentPrice={quote?.close}
+        currentPrice={displayQuote?.close}
         loading={perfLoading}
       />
       <IndexDiary diary={diary} loading={diary === null} />

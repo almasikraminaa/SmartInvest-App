@@ -1,4 +1,6 @@
 import math
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from utils.data_loader import load_all_data
 from constants.index_map import INDEX_MAP
 from utils.dynamic_filtering import dynamic_filtering
@@ -25,7 +27,7 @@ from utils.portfolio_models import (
 
 try:
     from services.genai_service import (
-        generate_portfolio_summary
+        generate_analysis_summary
     )
 
     GENAI_AVAILABLE = True
@@ -140,6 +142,57 @@ def analyze_portfolio_logic(
     """
     Main logic analyze portfolio
     """
+
+    # ==========================
+    # VALIDASI PERIODE
+    # ==========================
+
+    start_dt = datetime.strptime(
+        start_date,
+        "%Y-%m-%d"
+    )
+
+    end_dt = datetime.strptime(
+        end_date,
+        "%Y-%m-%d"
+    )
+
+    # tanggal akhir > awal
+    if end_dt <= start_dt:
+        raise ValueError(
+            "Tanggal akhir harus "
+            "setelah tanggal mulai"
+        )
+
+    delta = relativedelta(
+    end_dt,
+    start_dt
+    )
+
+    total_months = (
+        delta.years * 12
+        + delta.months
+    )
+
+    # minimal 6 bulan
+    if total_months < 6:
+        raise ValueError(
+            "Periode minimal "
+            "6 bulan"
+        )
+
+    # maksimal 5 tahun
+    if delta.years > 5 or (
+        delta.years == 5
+        and (
+            delta.months > 0
+            or delta.days > 0
+        )
+    ):
+        raise ValueError(
+            "Periode maksimal "
+            "5 tahun"
+        )
 
     # ==========================
     # LOAD DATA
@@ -715,26 +768,37 @@ def analyze_portfolio_logic(
     trend = ihsg_result["market_trend"]
     confidence = ihsg_result["confidence"]
 
-    if trend == "Bullish":
-        reason = f"IHSG diprediksi NAIK → fokus return maksimal (Sharpe ratio tertinggi: {sharpe_ratio})"
-    elif trend == "Bearish":
-        reason = f"IHSG diprediksi TURUN → fokus risiko rendah (Risk: {annual_risk}%)"
-    else:
-        reason = "IHSG sideways → menggunakan keseimbangan Sharpe Ratio dan Risk"
+    # Calculate variables for analysis summary
+    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+    end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+    period_years = (end_dt - start_dt).days / 365.25
+    historical_period = f"{start_date} s/d {end_date} ({period_years:.1f} tahun)"
+
+    alloc_items = [
+        f"{item['ticker'].replace('.JK', '')} ({item['weight']*100:.1f}%)" 
+        for item in portfolio
+    ]
+    portfolio_allocation = ", ".join(alloc_items)
+
+    detail_items = []
+    for item in portfolio:
+        detail_items.append(
+            f"- {item['ticker'].replace('.JK', '')} ({item['fullname']}): Bobot {item['weight']*100:.1f}%, Sektor {item['sector']}, Tren {item['trend']}, Rekomendasi {item['recommendation']}"
+        )
+    stock_details = "\n".join(detail_items)
+
+    market_condition = f"Pasar diprediksi {trend.upper()} ({'semangat naik' if trend == 'Bullish' else 'cenderung turun' if trend == 'Bearish' else 'stabil sideways'})"
 
     if GENAI_AVAILABLE:
-        portfolio_summary = generate_portfolio_summary(
-            best_method=result["method"],
-            annual_return=annual_return,
-            annual_risk=annual_risk,
-            sharpe_ratio=sharpe_ratio,
-            alpha=alpha_avg,
-            beta=beta_avg,
-            portfolio=portfolio,
-            market_trend=trend,
+        portfolio_summary = generate_analysis_summary(
+            market_condition=market_condition,
             confidence=confidence,
+            historical_period=historical_period,
+            portfolio_allocation=portfolio_allocation,
+            stock_details=stock_details,
+            model_choice=model_choice,
             investment_amount=investment_amount,
-            reason=reason
+            index_choice=index_choice      
         )
     else:
         portfolio_summary = f"Portofolio dioptimalkan menggunakan metode {result['method']} dengan Expected Return {annual_return}% dan Risiko {annual_risk}%."
